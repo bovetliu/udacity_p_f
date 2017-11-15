@@ -26,6 +26,11 @@ def instructional_code_04():
     print(df.std())
 
 
+def get_rolling_ema(values, window):
+    """return EMA, compared with Yahoo finance"""
+    return pd.Series(values).ewm(span=window, min_periods=window, adjust=False).mean()
+
+
 def get_rolling_mean(values, window):
     """Return rolling mean of given values, using specified window size."""
     return pd.Series(values).rolling(window=window).mean()
@@ -54,8 +59,12 @@ def instructional_code_08():
     # Compute rolling mean using a 20-day window
     # new version of pandaspd
     rolling_mean_of_spy = df['SPY'].rolling(window=20).mean()
-    rolling_mean_of_spy.plot(label='Rolling mean', ax=ax)
 
+    rolling_std = get_rolling_std(df['SPY'], 20)
+    upper_band, lower_band = get_bollinger_bands(rolling_mean_of_spy, rolling_std)
+
+    upper_band.plot(label='upper band', ax=ax)
+    lower_band.plot(label='lower band', ax=ax)
     ax.set_xlabel("Date")
     ax.set_ylabel("Price")
     ax.legend(loc="upper left")
@@ -85,5 +94,19 @@ def instructional_code_11():
     a0102_python_for_finance01.plot_data(daily_returns, title="Daily returns")
 
 
+def test_get_ema():
+    dates = pd.date_range('2017-4-13', '2017-10-13')
+    file_names = ['SPY_20100104-20171013', 'AAPL_20100104-20171013']
+    df = a0102_python_for_finance01.get_data_from_file_names(file_names, dates)
+    ema_spy = get_rolling_ema(df['SPY'], window=15)
+    ax = df['SPY'].plot(title="SPY rolling mean", label='SPY')
+    ema_spy.plot(label="ema_15", ax=ax)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price")
+    ax.legend(loc="upper left")
+    print(ema_spy)
+    plt.show()
+
+
 if __name__ == "__main__":
-    instructional_code_11()
+    test_get_ema()
