@@ -13,7 +13,7 @@ def get_normalized(in_ser: pd.Series, window_size: int, name: str=None):
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
     if window_size <= 0:
-        raise ValueError("window size should be larer than 0")
+        raise ValueError("window size should be larger than 0")
     rolling_mean = get_rolling_mean(in_ser, window_size)
     rolling_std = get_rolling_std(in_ser, window_size)
     tbr = (in_ser - rolling_mean) / rolling_std
@@ -39,7 +39,7 @@ def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None):
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
     if window_size <= 0:
-        raise ValueError("window size should be larer than 0")
+        raise ValueError("window size should be larger than 0")
 
     tbr = in_ser.rolling(window=window_size, min_periods=1).mean()
     if not str:
@@ -61,6 +61,8 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None):
     """
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
+    if window_size <= 0:
+        raise ValueError("window size should be larger than 0")
     tbr = in_ser.ewm(span=window_size, min_periods=0, adjust=False).mean()
     if not name:
         tbr.name = '{}_EMA_{}'.format(in_ser.name, window_size)
@@ -70,10 +72,17 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None):
 
 
 # Momentum
-def get_momentum(df, n):
-    moment_series = pd.Series(df['Close'].diff(n), name='Momentum_' + str(n))
-    df = df.join(moment_series)
-    return df
+def get_momentum(in_ser: pd.Series, window_size: int, name: str=None):
+    if not isinstance(in_ser, pd.Series):
+        raise TypeError("in_ser should be pandas Series")
+    # if window_size <= 0:
+    #     raise ValueError("window size should be larger than 0")
+    moment_series = in_ser.diff(window_size)
+    if not name:
+        moment_series.name = '{}_MOMEN_{}'.format(in_ser.name, window_size)
+    else:
+        moment_series.name = name
+    return moment_series
 
 
 # Rate of Change
