@@ -1,11 +1,13 @@
+from typing import Tuple
 import pandas as pd
 
 
-def get_normalized(in_ser: pd.Series, window_size: int, name: str=None):
+def get_normalized(in_ser: pd.Series, window_size: int, std_multiplier: int=2, name: str=None) -> pd.Series:
     """
 
-    :param in_ser:
-    :param window_size:
+    :param in_ser: incoming series
+    :param window_size: window size
+    :param std_multiplier: appeared in denominator
     :param name:
 
     :return:
@@ -16,25 +18,19 @@ def get_normalized(in_ser: pd.Series, window_size: int, name: str=None):
         raise ValueError("window size should be larger than 0")
     rolling_mean = get_rolling_mean(in_ser, window_size)
     rolling_std = get_rolling_std(in_ser, window_size)
-    tbr = (in_ser - rolling_mean) / rolling_std
-    if not name:
-        tbr.name = '{}_NORM_{}'.format(in_ser.name, window_size)
-    else:
-        tbr.name = name
+    tbr = (in_ser - rolling_mean) / (rolling_std.mul(std_multiplier))
+    tbr.name = '{}_NORM_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
 
-def get_rolling_std(in_ser: pd.Series, window_size: int, name: str=None):
+def get_rolling_std(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     """Return rolling standard deviation of given values, using specified window size."""
     tbr = in_ser.rolling(window=window_size).std()
-    if not name:
-        tbr.name = '{}_STD_{}'.format(in_ser.name, window_size)
-    else:
-        tbr.name = name
+    tbr.name = '{}_STD_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
 
-def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None):
+def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     """Return rolling mean of given values, using specified window size."""
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
@@ -42,14 +38,11 @@ def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None):
         raise ValueError("window size should be larger than 0")
 
     tbr = in_ser.rolling(window=window_size, min_periods=1).mean()
-    if not str:
-        tbr.name = '{}_MEAN_{}'.format(in_ser, window_size)
-    else:
-        tbr.name = name
+    tbr.name = '{}_MEAN_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
 
-def get_ema(in_ser: pd.Series, window_size: int, name: str=None):
+def get_ema(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     """
     get ema of a series, if name is not supplied, the to-be-returned series will have name of
     '{}_EMA_{}'.format(in_ser.name, window_size)
@@ -64,25 +57,64 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None):
     if window_size <= 0:
         raise ValueError("window size should be larger than 0")
     tbr = in_ser.ewm(span=window_size, min_periods=0, adjust=False).mean()
-    if not name:
-        tbr.name = '{}_EMA_{}'.format(in_ser.name, window_size)
-    else:
-        tbr.name = name
+    tbr.name = '{}_EMA_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
 
 # Momentum
-def get_momentum(in_ser: pd.Series, window_size: int, name: str=None):
+def get_momentum(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
     # if window_size <= 0:
     #     raise ValueError("window size should be larger than 0")
     moment_series = in_ser.diff(window_size)
-    if not name:
-        moment_series.name = '{}_MOMEN_{}'.format(in_ser.name, window_size)
-    else:
-        moment_series.name = name
+    moment_series.name = '{}_MOMEN_{}'.format(in_ser.name, window_size) if not name else name
     return moment_series
+
+
+def get_frws(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
+    """
+    calculate future return sum
+    :param in_ser: incoming series
+    :param window_size: window size
+    :param name: explicit series name
+
+    :return: a pandas Series showing return sum of future window
+    """
+    daily_return = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
+    daily_return_reversed = pd.Series(daily_return).reindex(daily_return.index[::-1])
+    daily_return_reversed_sum = daily_return_reversed.rolling(window=window_size).sum()
+    daily_return_reversed_mean = daily_return_reversed.rolling(window=window_size).mean()
+    daily_return_reversed_std = daily_return_reversed.rolling(window=window_size).std()
+    daily_return_reversed_sharp = daily_return_reversed_mean / daily_return_reversed_std
+    tbr = daily_return_reversed_sharp.reindex(daily_return_reversed_sum.index[::-1])
+    tbr.name = '{}_FRS_{}'.format(in_ser.name, window_size) if not name else name
+    return tbr.shift(-1)
+
+
+# MACD, MACD Signal and MACD difference
+def get_macd(
+        in_ser: pd.Series, n_fast: int, n_slow: int, n_signal: int=9, macd_diff_name: str=None) \
+        -> Tuple[pd.Series, pd.Series, pd.Series]:
+    """
+
+    :param in_ser: incoming pandas Series
+    :param n_fast: span of fast ema
+    :param n_slow: span of slow ema
+    :param n_signal: span of ema(fast - slow)
+    :param macd_diff_name: macd_diff series name
+
+    :return:a tuple of macd, macd_signal, macd_diff
+    """
+    ema_fast = get_ema(in_ser, n_fast)
+    ema_slow = get_ema(in_ser, n_slow)
+    macd = ema_fast - ema_slow
+    macd.name = '{}_MACD_{}_{}'.format(in_ser.name, n_fast, n_slow)
+    macd_signal = get_ema(macd, n_signal)
+    macd_signal.name = '{}_MACD_SIGN_{}'.format(macd.name, n_signal)
+    macd_diff = macd - macd_signal
+    macd_diff.name = macd_diff_name if macd_diff_name else '{}_DIFF_{}'.format(macd.name, macd_signal.name)
+    return macd, macd_signal, macd_diff
 
 
 # Rate of Change
@@ -94,32 +126,34 @@ def get_roc(df, n):
     return df
 
 
-# Average True Range
+# Average True Range, describing volatility
 def get_atr(df, n):
     i = 0
-    TR_l = [0]
+    tr_l = [0]
     while i < df.index[-1]:
-        TR = max(df.get_value(i + 1, 'High'), df.get_value(i, 'Close')) - min(df.get_value(i + 1, 'Low'),
+        tr = max(df.get_value(i + 1, 'High'), df.get_value(i, 'Close')) - min(df.get_value(i + 1, 'Low'),
                                                                               df.get_value(i, 'Close'))
-        TR_l.append(TR)
+        tr_l.append(tr)
         i = i + 1
-    TR_s = pd.Series(TR_l)
-    ATR = pd.Series(pd.ewma(TR_s, span=n, min_periods=n), name='ATR_' + str(n))
-    df = df.join(ATR)
+    tr_s = pd.Series(tr_l)
+    atr = pd.Series(pd.ewma(tr_s, span=n, min_periods=n), name='ATR_' + str(n))
+    df = df.join(atr)
     return df
 
 
-# Bollinger Bands
-def get_bbands(df, n):
-    MA = pd.Series(pd.rolling_mean(df['Close'], n))
-    MSD = pd.Series(pd.rolling_std(df['Close'], n))
-    b1 = 4 * MSD / MA
-    B1 = pd.Series(b1, name='BollingerB_' + str(n))
-    df = df.join(B1)
-    b2 = (df['Close'] - MA + 2 * MSD) / (4 * MSD)
-    B2 = pd.Series(b2, name='Bollinger%b_' + str(n))
-    df = df.join(B2)
-    return df
+def get_relative_bbands(
+        in_ser: pd.Series, window_size: int, upper_band_name: str=None, lower_band_name: str=None)\
+        -> Tuple[pd.Series, pd.Series]:
+    """Return relative positions in band."""
+    rolling_mean = get_rolling_mean(in_ser, window_size)
+    rolling_std = get_rolling_std(in_ser, window_size)
+
+    upper_band = rolling_mean + rolling_std.mul(2)
+    upper_band.name = upper_band_name if upper_band_name else '{}_UPPERBB_{}'.format(in_ser.name, window_size)
+
+    lower_band = rolling_mean - rolling_std.mul(2)
+    lower_band.name = lower_band_name if lower_band_name else '{}_LOWERBB_{}'.format(in_ser.name, window_size)
+    return upper_band, lower_band
 
 
 # Pivot Points, Supports and Resistances
@@ -206,17 +240,6 @@ def get_adx(df, n, n_ADX):
     return df
 
 
-# MACD, MACD Signal and MACD difference
-def get_macd(df, n_fast, n_slow):
-    EMAfast = pd.Series(pd.ewma(df['Close'], span=n_fast, min_periods=n_slow - 1))
-    EMAslow = pd.Series(pd.ewma(df['Close'], span=n_slow, min_periods=n_slow - 1))
-    MACD = pd.Series(EMAfast - EMAslow, name='MACD_' + str(n_fast) + '_' + str(n_slow))
-    MACDsign = pd.Series(pd.ewma(MACD, span=9, min_periods=8), name='MACDsign_' + str(n_fast) + '_' + str(n_slow))
-    MACDdiff = pd.Series(MACD - MACDsign, name='MACDdiff_' + str(n_fast) + '_' + str(n_slow))
-    df = df.join(MACD)
-    df = df.join(MACDsign)
-    df = df.join(MACDdiff)
-    return df
 
 
 # Mass Index

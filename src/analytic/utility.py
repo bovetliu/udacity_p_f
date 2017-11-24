@@ -67,7 +67,7 @@ def get_adjclose_from_csv_names(file_names: List[str], dates: pd.DatetimeIndex =
     return df
 
 
-def plot_data(df: pd.DataFrame, title="Stock prices", ylabel="Price") -> None:
+def plot_data(df, title="Stock prices", ylabel="Price") -> None:
     """
     Plot stock prices
     :param df: data frame, not Null
