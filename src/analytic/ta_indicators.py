@@ -2,7 +2,7 @@ from typing import Tuple
 import pandas as pd
 
 
-def get_normalized(in_ser: pd.Series, window_size: int, std_multiplier: int=2, name: str=None) -> pd.Series:
+def get_window_normalized(in_ser: pd.Series, window_size: int, std_multiplier: int=2, name: str=None) -> pd.Series:
     """
 
     :param in_ser: incoming series
@@ -68,11 +68,18 @@ def get_momentum(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Seri
     # if window_size <= 0:
     #     raise ValueError("window size should be larger than 0")
     moment_series = in_ser.diff(window_size)
+    moment_series = moment_series / in_ser.shift(window_size)
     moment_series.name = '{}_MOMEN_{}'.format(in_ser.name, window_size) if not name else name
     return moment_series
 
 
-def get_frws(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
+def get_daily_return(in_ser: pd.Series, name: str=None) -> pd.Series:
+    tbr = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
+    tbr.name = name if name else '{}_DRTN'.format(in_ser.name)
+    return tbr
+
+
+def get_frws(in_ser: pd.Series, window_size: int=1, name: str=None) -> pd.Series:
     """
     calculate future return sum
     :param in_ser: incoming series
@@ -81,15 +88,18 @@ def get_frws(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
 
     :return: a pandas Series showing return sum of future window
     """
-    daily_return = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
+    if window_size < 1:
+        raise ValueError("window_size should be larger than 0")
+    daily_return = get_daily_return(in_ser)
     daily_return_reversed = pd.Series(daily_return).reindex(daily_return.index[::-1])
-    daily_return_reversed_sum = daily_return_reversed.rolling(window=window_size).sum()
-    daily_return_reversed_mean = daily_return_reversed.rolling(window=window_size).mean()
-    daily_return_reversed_std = daily_return_reversed.rolling(window=window_size).std()
-    daily_return_reversed_sharp = daily_return_reversed_mean / daily_return_reversed_std
-    tbr = daily_return_reversed_sharp.reindex(daily_return_reversed_sum.index[::-1])
+    if window_size > 1:
+        daily_return_reversed_sum = daily_return_reversed.rolling(window=window_size).sum()
+    else:
+        daily_return_reversed_sum = daily_return_reversed
+    tbr = daily_return_reversed_sum.reindex(daily_return_reversed_sum.index[::-1])
+    tbr = tbr.shift(-1)
     tbr.name = '{}_FRS_{}'.format(in_ser.name, window_size) if not name else name
-    return tbr.shift(-1)
+    return tbr
 
 
 # MACD, MACD Signal and MACD difference
@@ -141,7 +151,7 @@ def get_atr(df, n):
     return df
 
 
-def get_relative_bbands(
+def get_bbands(
         in_ser: pd.Series, window_size: int, upper_band_name: str=None, lower_band_name: str=None)\
         -> Tuple[pd.Series, pd.Series]:
     """Return relative positions in band."""
@@ -149,10 +159,10 @@ def get_relative_bbands(
     rolling_std = get_rolling_std(in_ser, window_size)
 
     upper_band = rolling_mean + rolling_std.mul(2)
-    upper_band.name = upper_band_name if upper_band_name else '{}_UPPERBB_{}'.format(in_ser.name, window_size)
+    upper_band.name = upper_band_name if upper_band_name else '{}_UPPBB_{}'.format(in_ser.name, window_size)
 
     lower_band = rolling_mean - rolling_std.mul(2)
-    lower_band.name = lower_band_name if lower_band_name else '{}_LOWERBB_{}'.format(in_ser.name, window_size)
+    lower_band.name = lower_band_name if lower_band_name else '{}_LOWBB_{}'.format(in_ser.name, window_size)
     return upper_band, lower_band
 
 
@@ -275,7 +285,7 @@ def get_vortex(df, n):
 
 
 # KST Oscillator
-def KST(df, r1, r2, r3, r4, n1, n2, n3, n4):
+def get_kst(df, r1, r2, r3, r4, n1, n2, n3, n4):
     M = df['Close'].diff(r1 - 1)
     N = df['Close'].shift(r1 - 1)
     ROC1 = M / N
@@ -298,7 +308,7 @@ def KST(df, r1, r2, r3, r4, n1, n2, n3, n4):
 
 
 # Relative Strength Index
-def RSI(df, n):
+def get_rsi(df, n):
     i = 0
     UpI = [0]
     DoI = [0]
@@ -410,7 +420,7 @@ def get_eom(df, n):
 
 
 # Commodity Channel Index
-def CCI(df, n):
+def get_cci(df, n):
     PP = (df['High'] + df['Low'] + df['Close']) / 3
     CCI = pd.Series((PP - pd.rolling_mean(PP, n)) / pd.rolling_std(PP, n), name='CCI_' + str(n))
     df = df.join(CCI)

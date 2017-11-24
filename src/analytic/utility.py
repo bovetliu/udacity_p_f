@@ -51,18 +51,22 @@ def get_adjclose_from_csv_names(file_names: List[str], dates: pd.DatetimeIndex =
         file_names.insert(0, "SPY_20100104-20171013")
 
     for file_name in file_names:
+        col_rename_map = {
+            'Adj Close': file_name.split('_', 1)[0],
+            'Volume': file_name.split('_', 1)[0] + "_VOL"
+        }
         df_temp = pd.read_csv("{}/{}.csv".format(base_dir, file_name),
                               index_col='Date',
                               parse_dates=True,
-                              usecols=['Date', 'Adj Close'],
-                              na_values=['NaN']).rename(columns={'Adj Close': file_name.split('_', 1)[0]})
+                              usecols=['Date', 'Adj Close', 'Volume'],
+                              na_values=['NaN']).rename(columns=col_rename_map)
         if df is None:
             df = df_temp
         else:
             df = df.join(df_temp, how="inner")
 
     if not originally_has_spy:
-        df = df.drop("SPY", axis=1)
+        df = df.drop(["SPY", "SPY_VOL"], axis=1)
 
     return df
 
@@ -82,6 +86,22 @@ def plot_data(df, title="Stock prices", ylabel="Price") -> None:
     # axes_sub_plot.set_ylable("Price") no longer works
 
     plt.show(block=True)
+
+
+def rescale(in_ser: pd.Series):
+    """
+    rescale a pandas series so 2 * its standard deviation = 0.9545. its mean equals to 0
+    :param in_ser:
+    :return:
+    """
+    if not isinstance(in_ser, pd.Series):
+        raise TypeError("in_ser should be pandas Series")
+    std = in_ser.std()
+    print("std: {}".format(std))
+    x = 0.9545 / 2 / std
+
+    stretched = in_ser.mul(x)
+    return stretched - stretched.mean()
 
 
 if __name__ == "__main__":
