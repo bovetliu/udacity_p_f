@@ -1,6 +1,6 @@
 import numpy as np
-from sklearn import preprocessing, neighbors
-import matplotlib.pyplot as plt
+from sklearn import neighbors
+# import matplotlib.pyplot as plt
 import pandas as pd
 
 from analytic import utility
@@ -62,29 +62,6 @@ def practice_01():
         if output_pred[i] == output_test[i]:
             cnt_correct += 1
     print(cnt_correct * 1.0 / len(output_pred))
-
-
-
-
-        #
-    #
-    # train_input_mx, train_input_test, output_train, output_test = \
-    #     cross_validation.train_test_split(input_mx, output, test_size=0.2)
-    # print("len(train_input_mx): {}".format(len(train_input_mx)))
-    # print("len(train_input_test): {}".format(len(train_input_test)))
-    # print("len(output_train): {}".format(len(output_train)))
-    # print("len(output_test): {}".format(len(output_test)))
-    #
-    # n_neighbors = 3
-    # knn = neighbors.KNeighborsRegressor(n_neighbors=n_neighbors, weights='uniform')
-    # knn.fit(train_input_mx, output_train)
-    # output_predict = knn.predict(train_input_test)
-    #
-    # output_test_ser = pd.Series(output_test, name="output_test")
-    # output_predict_ser = pd.Series(output_predict, name="output_pred")
-    # compare_df = pd.DataFrame(pd.concat([output_test_ser, output_predict_ser], axis=1))
-    # compare_df.plot()
-    # plt.show(block=True)
 
 
 if __name__ == "__main__":
