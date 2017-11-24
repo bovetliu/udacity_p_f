@@ -36,8 +36,7 @@ def practice_01():
     #                          rescaled_volatility,
     #                          aapl_simple_mean_drtn_rescaled,
     #                          vol_window_normlzd,
-    #                          momentum_rescaled,
-    #                          future_returns], axis=1)
+    #                          momentum_rescaled], axis=1)
     combined_df = pd.DataFrame(pd.concat([rel_pos_bb,
                                           rescaled_volatility,
                                           aapl_simple_mean_drtn_rescaled], axis=1))
