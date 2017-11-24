@@ -97,7 +97,6 @@ def rescale(in_ser: pd.Series):
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
     std = in_ser.std()
-    print("std: {}".format(std))
     x = 0.9545 / 2 / std
 
     stretched = in_ser.mul(x)

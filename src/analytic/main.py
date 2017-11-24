@@ -1,9 +1,14 @@
-import math
+import numpy as np
+from sklearn import preprocessing, neighbors
 import matplotlib.pyplot as plt
 import pandas as pd
 
 from analytic import utility
 from analytic import ta_indicators
+
+
+def polarize(x):
+    return 1 if x > 0 else (0 if x == 0 else -1)
 
 
 def practice_01():
@@ -26,16 +31,62 @@ def practice_01():
     # following are labels, without rescaling
     future_returns = ta_indicators.get_frws(aapl_series)
     # print(rel_pos_bb)
-    combined_df = pd.concat([rel_pos_bb,
-                             rescaled_volatility,
-                             aapl_simple_mean_drtn_rescaled,
-                             vol_window_normlzd,
-                             momentum_rescaled,
-                             future_returns], axis=1)
-    combined_df.plot()
-    plt.show(block=True)
+
+    # combined_df = pd.concat([rel_pos_bb,
+    #                          rescaled_volatility,
+    #                          aapl_simple_mean_drtn_rescaled,
+    #                          vol_window_normlzd,
+    #                          momentum_rescaled,
+    #                          future_returns], axis=1)
+    combined_df = pd.DataFrame(pd.concat([rel_pos_bb,
+                                          rescaled_volatility,
+                                          aapl_simple_mean_drtn_rescaled], axis=1))
+
+    input_mx = np.array(combined_df.iloc[20: -1, :])
+    output = np.array(future_returns.iloc[20: -1])
+    output = np.array([polarize(x) for x in output])
+
+    train_size = len(input_mx) - 252
+    output_test = output[-252:]
+    output_pred = []
+    for i in range(train_size - 252, train_size, 1):
+        n_neighbors = 3
+        knn = neighbors.KNeighborsClassifier(n_neighbors=n_neighbors, weights='uniform')
+        knn.fit(input_mx[i - 1008:i], output[i - 1008:i])
+
+        # print(input_mx[i: i + 1])
+        predict = knn.predict(input_mx[i: i + 1])
+        output_pred.append(predict[0])
+
+    cnt_correct = 0
+    for i in range(len(output_pred)):
+        if output_pred[i] == output_test[i]:
+            cnt_correct += 1
+    print(cnt_correct * 1.0 / len(output_pred))
+
+
+
+
+        #
+    #
+    # train_input_mx, train_input_test, output_train, output_test = \
+    #     cross_validation.train_test_split(input_mx, output, test_size=0.2)
+    # print("len(train_input_mx): {}".format(len(train_input_mx)))
+    # print("len(train_input_test): {}".format(len(train_input_test)))
+    # print("len(output_train): {}".format(len(output_train)))
+    # print("len(output_test): {}".format(len(output_test)))
+    #
+    # n_neighbors = 3
+    # knn = neighbors.KNeighborsRegressor(n_neighbors=n_neighbors, weights='uniform')
+    # knn.fit(train_input_mx, output_train)
+    # output_predict = knn.predict(train_input_test)
+    #
+    # output_test_ser = pd.Series(output_test, name="output_test")
+    # output_predict_ser = pd.Series(output_predict, name="output_pred")
+    # compare_df = pd.DataFrame(pd.concat([output_test_ser, output_predict_ser], axis=1))
+    # compare_df.plot()
+    # plt.show(block=True)
 
 
 if __name__ == "__main__":
     practice_01()
-
