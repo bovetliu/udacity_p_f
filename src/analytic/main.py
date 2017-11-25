@@ -1,4 +1,5 @@
 import numpy as np
+from hmmlearn import hmm
 from sklearn import neighbors
 # import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,7 +12,10 @@ def polarize(x):
     return 1 if x > 0 else (0 if x == 0 else -1)
 
 
-def practice_01():
+def practice_knn():
+    """
+    practice KNN prediction
+    """
     window_size = 20
     csv_files = ['AAPL_20100104-20171013']
     aapl_df = utility.get_adjclose_from_csv_names(csv_files)
@@ -64,5 +68,39 @@ def practice_01():
     print(cnt_correct * 1.0 / len(output_pred))
 
 
+def practice_hmm():
+    np.random.seed(42)
+
+    model = hmm.GaussianHMM(n_components=3, covariance_type='full')
+
+    # at initial time, the probabilities distribution of internal state
+    model.startprob_ = np.array([0.6, 0.3, 0.1])
+
+    # transition matrix
+    model.transmat_ = np.array([[0.7, 0.2, 0.1],
+                                [0.3, 0.5, 0.2],
+                                [0.3, 0.3, 0.4]])
+
+    model.means_ = np.array([[0.0, 0.0],
+                             [3.0, -3.0],
+                             [5.0, 10.0]])
+
+    model.covars_ = np.tile(np.identity(2), (3, 1, 1))
+    X, Z = model.sample(100)
+    print(X)  # sequence of observable X
+    print(Z)  # a sequence of hidden state
+
+
+def practice_np():
+    a = np.array([0, 1, 2])
+    print(np.tile(a, [2]))
+    print("=================")
+    print(np.tile(a, [1, 2]))
+    print("=================")
+    print(np.tile(a, [2, 1, 2]))
+    print("=================")
+    print(np.tile(np.identity(2), (3, 1, 1)))
+
+
 if __name__ == "__main__":
-    practice_01()
+    practice_np()
