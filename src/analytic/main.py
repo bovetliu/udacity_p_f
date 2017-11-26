@@ -18,7 +18,7 @@ def practice_knn():
     """
     window_size = 20
     csv_files = ['AAPL_20100104-20171013']
-    aapl_df = utility.get_adjclose_from_csv_names(csv_files)
+    aapl_df = utility.get_cols_from_csv_names(csv_files)
     # utility.plot_data(aapl_df)
     aapl_series = aapl_df['AAPL']
     aapl_simple_mean = ta_indicators.get_rolling_mean(aapl_series, window_size)
@@ -91,6 +91,16 @@ def practice_hmm():
     print(Z)  # a sequence of hidden state
 
 
+def practice_hmm02():
+    csv_files = ['SHA000001']
+    sha_001_df = utility.get_cols_from_csv_names(csv_files, interested_col=['Date', 'Close', 'Volume'], join_spy=False)
+    # reverse
+    sha_001_df = sha_001_df.iloc[::-1]
+    # according to page 9, model cross validation, whole data set
+    sha_001_df = sha_001_df.loc['2000-01-04':'2016-09-02']
+    print(sha_001_df)
+
+
 def practice_np():
     a = np.array([0, 1, 2])
     print(np.tile(a, [2]))
@@ -103,4 +113,4 @@ def practice_np():
 
 
 if __name__ == "__main__":
-    practice_np()
+    practice_hmm02()

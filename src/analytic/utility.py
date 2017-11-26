@@ -28,12 +28,17 @@ def get_bars_of_stock(file_name: str, dates: pd.DatetimeIndex = None, base_dir="
     return df
 
 
-def get_adjclose_from_csv_names(file_names: List[str], dates: pd.DatetimeIndex = None,
-                                base_dir="../rawdata") -> pd.DataFrame:
+def get_cols_from_csv_names(file_names: List[str],
+                            dates: pd.DatetimeIndex = None,
+                            interested_col: List[str] = ('Date', 'Adj Close', 'Volume'),
+                            join_spy=True,
+                            base_dir="../rawdata") -> pd.DataFrame:
     """
 
     :param file_names: list of csv file names, without suffix
     :param dates: pandas.DatetimeIndex
+    :param interested_col: interested columns
+    :param join_spy join spy into data frame or not
     :param base_dir: base dir path
     :return: pandas.DateFrame
     """
@@ -48,26 +53,24 @@ def get_adjclose_from_csv_names(file_names: List[str], dates: pd.DatetimeIndex =
             break
     # print("get_data_from_file_names: originally_has_spy {}".format(originally_has_spy))
     if not originally_has_spy:
-        file_names.insert(0, "SPY_20100104-20171013")
+        if join_spy:
+            file_names.insert(0, "SPY_20100104-20171013")
 
     for file_name in file_names:
         col_rename_map = {
-            'Adj Close': file_name.split('_', 1)[0],
-            'Volume': file_name.split('_', 1)[0] + "_VOL"
+            'Adj Close': file_name.split('_', 1)[0] + "_ADJ_CLOSE",
+            'Volume': file_name.split('_', 1)[0] + "_VOL",
+            'Close': file_name.split('_', 1)[0] + "_CLOSE"
         }
         df_temp = pd.read_csv("{}/{}.csv".format(base_dir, file_name),
                               index_col='Date',
                               parse_dates=True,
-                              usecols=['Date', 'Adj Close', 'Volume'],
+                              usecols=interested_col,
                               na_values=['NaN']).rename(columns=col_rename_map)
         if df is None:
             df = df_temp
         else:
             df = df.join(df_temp, how="inner")
-
-    if not originally_has_spy:
-        df = df.drop(["SPY", "SPY_VOL"], axis=1)
-
     return df
 
 
@@ -104,7 +107,4 @@ def rescale(in_ser: pd.Series):
 
 
 if __name__ == "__main__":
-    csv_files = ['AAPL_20100104-20171013']
-    aapl_df = get_adjclose_from_csv_names(csv_files)
-
-    print(aapl_df)
+    pass
