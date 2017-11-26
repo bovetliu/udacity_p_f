@@ -1,4 +1,5 @@
 from typing import Tuple
+import numpy as np
 import pandas as pd
 
 
@@ -76,6 +77,12 @@ def get_momentum(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Seri
 def get_daily_return(in_ser: pd.Series, name: str=None) -> pd.Series:
     tbr = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
     tbr.name = name if name else '{}_DRTN'.format(in_ser.name)
+    return tbr
+
+
+def get_ln_return(in_ser: pd.Series, name: str=None) -> pd.Series:
+    tbr = in_ser.apply(np.log) - in_ser.shift(1).apply(np.log)
+    tbr.name = name if name else '{}_LNRTN'.format(in_ser.name)
     return tbr
 
 

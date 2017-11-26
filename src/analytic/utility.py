@@ -59,7 +59,7 @@ def get_cols_from_csv_names(file_names: List[str],
     for file_name in file_names:
         col_rename_map = {
             'Adj Close': file_name.split('_', 1)[0] + "_ADJ_CLOSE",
-            'Volume': file_name.split('_', 1)[0] + "_VOL",
+            'Volume': file_name.split('_', 1)[0] + "_VOLUME",
             'Close': file_name.split('_', 1)[0] + "_CLOSE"
         }
         df_temp = pd.read_csv("{}/{}.csv".format(base_dir, file_name),

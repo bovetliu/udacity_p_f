@@ -1,11 +1,17 @@
 import numpy as np
 from hmmlearn import hmm
-from sklearn import neighbors
-# import matplotlib.pyplot as plt
+import warnings
+from sklearn import neighbors, preprocessing
 import pandas as pd
-
+import seaborn as sns
 from analytic import utility
 from analytic import ta_indicators
+
+from matplotlib import cm
+from matplotlib import pyplot as plt
+
+np.set_printoptions(suppress=True)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def polarize(x):
@@ -92,13 +98,51 @@ def practice_hmm():
 
 
 def practice_hmm02():
-    csv_files = ['SHA000001']
+    csv_files = ['SHA01']
     sha_001_df = utility.get_cols_from_csv_names(csv_files, interested_col=['Date', 'Close', 'Volume'], join_spy=False)
     # reverse
-    sha_001_df = sha_001_df.iloc[::-1]
-    # according to page 9, model cross validation, whole data set
-    sha_001_df = sha_001_df.loc['2000-01-04':'2016-09-02']
-    print(sha_001_df)
+    sha_001_df = sha_001_df.iloc[::-1].loc['2000-01-04':'2016-09-02']
+
+    sha_001_df_drtn = ta_indicators.get_daily_return(sha_001_df['SHA01_CLOSE'])
+    sha_001_df_drtn.iloc[0] = 0
+
+    print('len(sha_001_df_drtn) : {}'.format(sha_001_df_drtn))
+    sha_001_df_drtn_nparray = np.array(sha_001_df_drtn)
+    X = np.column_stack([sha_001_df_drtn_nparray])
+
+    # transformed = preprocessing.quantile_transform(X, output_distribution='normal', axis=0)
+    # print(np.std(transformed, axis=0))
+    # print(np.mean(transformed, axis=0))
+    # input_matrix_normalized = preprocessing.normalize(input_matrix, norm='l2')
+    # np.set_printoptions(threshold=5000, suppress=True)
+    # print(np.column_stack([np.transpose(transformed)[0], sha_001_df_drtn_nparray]))
+    trained_hmm = hmm.GaussianHMM(n_components=8, covariance_type='diag', n_iter=2000).fit(X)
+    trained_hmm.transmat_ = np.round(trained_hmm.transmat_, 5)
+    # Predict the optimal sequence of internal hidden state
+    hidden_states_seq = trained_hmm.predict(X)
+    print("trained_hmm.transmat_:")
+    print(trained_hmm.transmat_)
+    print('len(hidden_states_seq) : {}'.format(len(hidden_states_seq)))
+
+    print("Means and vars of each hidden state")
+    for i in range(trained_hmm.n_components):
+        print("{0}th hidden state".format(i))
+        print("mean = ", trained_hmm.means_[i])
+        print("var = ", np.diag(trained_hmm.covars_[i]))
+        print()
+
+    sns.set_style('white')
+    plt.figure(figsize=(15, 8))
+    for i in range(trained_hmm.n_components):
+        state = (hidden_states_seq == i)
+        print(state)
+        # plt.plot(datelist[state], closeidx[state], '.', label='latent state %d' % i, lw=1)
+        # plt.legend()
+        # plt.grid(1)
+
+def practice_hmm03():
+    pass
+
 
 
 def practice_np():
