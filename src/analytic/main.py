@@ -24,7 +24,7 @@ def practice_knn():
     """
     window_size = 20
     csv_files = ['AAPL_20100104-20171013']
-    aapl_df = utility.get_cols_from_csv_names(csv_files)
+    aapl_df = utility.get_cols_from_csv_names(csv_files, keep_spy_if_not_having_spy=False)
     # utility.plot_data(aapl_df)
     aapl_series = aapl_df['AAPL']
     aapl_simple_mean = ta_indicators.get_rolling_mean(aapl_series, window_size)
@@ -104,7 +104,7 @@ def practice_hmm02():
     # get raw, whole scale data
     sha_001_df = utility.get_cols_from_csv_names(csv_files,
                                                  interested_col=['Date', 'Close', 'Volume'],
-                                                 join_spy=False,
+                                                 keep_spy_if_not_having_spy=False,
                                                  base_dir='/home/boweiliu/workrepo/udacity_p_f/src/rawdata')
     # reverse and select data required for study
     sha_001_df = sha_001_df.iloc[::-1].loc['2000-01-04':'2016-09-02']
@@ -244,7 +244,18 @@ def practice_np():
     print(np.tile(a, [2, 1, 2]))
     print("=================")
     print(np.tile(np.identity(2), (3, 1, 1)))
+    data_frame = utility.get_cols_from_csv_names(['AAPL_20100104-20171013'],
+                                                 keep_spy_if_not_having_spy=False,
+                                                 interested_col=['Date', 'Close', 'Open', 'Volume'])
+
+    data_frame = data_frame.loc['2017-09-28':'2017-10-13']
+    signal = [0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0]
+    data_frame = data_frame.assign(AAPL_SIGNAL=pd.Series(signal).values)
+
+    net_worth_ser = utility.get_relative_net_worth(data_frame, 'AAPL')
+    print(net_worth_ser)
+
 
 
 if __name__ == "__main__":
-    practice_hmm02()
+    practice_np()
