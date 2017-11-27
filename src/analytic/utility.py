@@ -31,6 +31,7 @@ def get_bars_of_stock(file_name: str, dates: pd.DatetimeIndex = None, base_dir="
 def get_cols_from_csv_names(file_names: List[str],
                             dates: pd.DatetimeIndex = None,
                             interested_col: List[str] = ('Date', 'Adj Close', 'Volume'),
+                            join_spy_for_data_integrity=True,
                             keep_spy_if_not_having_spy=True,
                             base_dir="../rawdata") -> pd.DataFrame:
     """
@@ -38,6 +39,7 @@ def get_cols_from_csv_names(file_names: List[str],
     :param file_names: list of csv file names, without suffix
     :param dates: pandas.DatetimeIndex
     :param interested_col: interested columns
+    :param join_spy_for_data_integrity will join spy for data integrity
     :param keep_spy_if_not_having_spy join spy into data frame or not
     :param base_dir: base dir path
     :return: pandas.DateFrame
@@ -53,7 +55,8 @@ def get_cols_from_csv_names(file_names: List[str],
             break
     # print("get_data_from_file_names: originally_has_spy {}".format(originally_has_spy))
     if not originally_has_spy:
-        file_names.insert(0, "SPY_20100104-20171013")
+        if join_spy_for_data_integrity:
+            file_names.insert(0, "SPY_20100104-20171013")
 
     for file_name in file_names:
         temp_symbol = file_name.split('_', 1)[0]
@@ -167,7 +170,3 @@ def rescale(in_ser: pd.Series):
 
     stretched = in_ser.mul(x)
     return stretched - stretched.mean()
-
-
-if __name__ == "__main__":
-    pass
