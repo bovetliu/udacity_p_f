@@ -4,8 +4,7 @@ import warnings
 from sklearn import neighbors, preprocessing
 import pandas as pd
 import seaborn as sns
-from analytic import utility
-from analytic import ta_indicators
+from analytic import utility, performance, ta_indicators, hmm_strategy
 
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -103,7 +102,7 @@ def practice_hmm02():
 
     # get raw, whole scale data
     sha_001_df = utility.get_cols_from_csv_names(csv_files,
-                                                 interested_col=['Date', 'Close', 'Volume'],
+                                                 interested_col=['Date', 'Open', 'Close', 'Volume'],
                                                  join_spy_for_data_integrity=False,
                                                  keep_spy_if_not_having_spy=False,
                                                  base_dir='/home/boweiliu/workrepo/udacity_p_f/src/rawdata')
@@ -133,24 +132,24 @@ def practice_hmm02():
     rtn_pds_test = rtn.iloc[split_idx:]
 
     # natural log return
-    ln_rtn_pds_train = ln_rtn.iloc[0:split_idx]
-    ln_rtn_pds_test = ln_rtn.iloc[split_idx:]
+    ln_rtn_train = ln_rtn.iloc[0:split_idx]
+    ln_rtn_test = ln_rtn.iloc[split_idx:]
 
     date_list_train = date_list[0:split_idx]
     date_list_test = date_list[split_idx:]
 
-    X = np.column_stack([np.array(ln_rtn_pds_train)])
-    X_test = np.column_stack([np.array(ln_rtn_pds_test)])
+    X = np.column_stack([np.array(ln_rtn_train)])
+    X_test = np.column_stack([np.array(ln_rtn_test)])
 
-    trained_hmm = hmm.GaussianHMM(n_components=6, covariance_type='full', n_iter=5000)
+    trained_hmm = hmm.GaussianHMM(n_components=6, covariance_type='full', n_iter=500)
     # only use sample section to train model
     trained_hmm.fit(X)
     # Predict the optimal sequence of internal hidden state
-    hidden_states_seq_train = trained_hmm.predict(X)
-    h_s_seq_test = trained_hmm.predict(X_test)
+    hs_seq_train = trained_hmm.predict(X)
+    hs_seq_test = trained_hmm.predict(X_test)
 
-    print('len(hidden_states_seq_train) : {}'.format(len(hidden_states_seq_train)))
-    print('len(hidden_states_seq_test) : {}'.format(len(h_s_seq_test)))
+    print('len(hidden_states_seq_train) : {}'.format(len(hs_seq_train)))
+    print('len(hidden_states_seq_test) : {}'.format(len(hs_seq_test)))
 
     print("\ntrained_hmm.transmat_:")
     print(trained_hmm.transmat_)
@@ -164,7 +163,7 @@ def practice_hmm02():
     sns.set_style('white')
     plt.figure(figsize=(15, 8))
     for i in range(trained_hmm.n_components):
-        state = (hidden_states_seq_train == i)
+        state = (hs_seq_train == i)
         #  https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html#matplotlib.pyplot.plot
         plt.plot(date_list_train[state],  # x series
                  close_pds_train.iloc[state],  # y series
@@ -176,32 +175,33 @@ def practice_hmm02():
     # plt.show()
 
     # start cell 2
-    h_s_class = []
+    hs_class = []
 
     plt.figure(figsize=(15, 8))
     for state_i in range(trained_hmm.n_components):
-        mask = [1 if state else 0 for state in (hidden_states_seq_train == state_i)]
-        log_cum_rtn = ln_rtn_pds_train.multiply(mask, axis=0).cumsum()
+        mask = [1 if state else 0 for state in (hs_seq_train == state_i)]
+        mask = np.append([0], mask[:-1])  # right shift mask, which represents can only BUY/SELL at 2nd trading day
+        log_cum_rtn = ln_rtn_train.multiply(mask, axis=0).cumsum()
         if log_cum_rtn.iloc[-1] > 0.5:
             # market up
-            h_s_class.append(1)
+            hs_class.append(1)
         elif log_cum_rtn.iloc[-1] < -0.5:
             # market down
-            h_s_class.append(-1)
+            hs_class.append(-1)
         else:
             # market vibrate
-            h_s_class.append(0)
+            hs_class.append(0)
         plt.plot(log_cum_rtn, label='hidden state {}'.format(state_i))
         plt.legend()
         plt.grid(1)
-    print("hidden_state_classification : \n {}".format(h_s_class))
+    print("hidden_state_classification : \n {}".format(hs_class))
     # plt.show()
 
     # start cell 3
     # remapping hidden states sequence into assumed states sequence
     assumed_states_seq_train = np.array(
-        [h_s_class[hidden_state_i]
-         for hidden_state_i in hidden_states_seq_train])
+        [hs_class[hidden_state_i]
+         for hidden_state_i in hs_seq_train])
     # -1 means market down
     # 0 means market vibrate
     # 1 means market up
@@ -210,7 +210,8 @@ def practice_hmm02():
     plt.figure(figsize=(15, 8))
     for state_i in [-1, 0, 1]:
         mask = [1 if assume_state == state_i else 0 for assume_state in assumed_states_seq_train]
-        assumed_states_rtn = ln_rtn_pds_train.multiply(mask, axis=0)
+        mask = np.append([0], mask[:-1])  # right shift mask, which represents can only BUY/SELL at 2nd trading day
+        assumed_states_rtn = ln_rtn_train.multiply(mask, axis=0)
         assumed_states_cum_rtn = assumed_states_rtn.cumsum()
         the_label = 'log-up' if state_i == 1 else 'log-down' if state_i == -1 else 'log-vibration'
         plt.plot(assumed_states_cum_rtn, label=the_label)
@@ -220,7 +221,7 @@ def practice_hmm02():
 
     # start cell 4
     # remapping hidden states sequence into assumed states sequence
-    assumed_states_seq_test = np.array([h_s_class[hsi] for hsi in h_s_seq_test])
+    assumed_states_seq_test = np.array([hs_class[hsi] for hsi in hs_seq_test])
     # 0 means xia die
     # 1 means zhengdang
     # 2 means shangzhang
@@ -229,14 +230,86 @@ def practice_hmm02():
     plt.figure(figsize=(15, 8))
     for state_i in [-1, 0, 1]:
         mask = [1 if assume_state == state_i else 0 for assume_state in assumed_states_seq_test]
-        assumed_states_rtn_test = ln_rtn_pds_test.multiply(mask, axis=0)
+        assumed_states_rtn_test = ln_rtn_test.multiply(mask, axis=0)
         assumed_states_cum_rtn_test = assumed_states_rtn_test.cumsum()
         the_label = 'log-up-test' if state_i == 1 else \
             'log-down-test' if state_i == -1 else 'log-vibration-test'
         plt.plot(assumed_states_cum_rtn_test, label=the_label)
         plt.legend()
         plt.grid(1)
+
+    in_sample_df = sha_001_df.iloc[0: split_idx]
+    test_df = sha_001_df.iloc[split_idx:]
+
+    print("assumed_states_seq_train : {}".format(assumed_states_seq_train))
+    in_sample_df = in_sample_df.assign(SHA01_SIGNAL=assumed_states_seq_train)
+    test_df = test_df.assign(SHA01_SIGNAL=assumed_states_seq_test)
+
+    net_worths_in_sample = performance.get_relative_net_worth(in_sample_df, 'SHA01')
+    print(net_worths_in_sample)
+    net_worths_test = performance.get_relative_net_worth(test_df, 'SHA01')
+    print(net_worths_test)
+
+    sharpe_ratio_in_sample = performance.get_sharp_ratio(net_worths_in_sample)
+    sharpe_ratio_test = performance.get_sharp_ratio(net_worths_test)
+    print(sharpe_ratio_in_sample, sharpe_ratio_test)
     plt.show()
+
+
+def practice_hmm03():
+    """
+    using rescaled_norm, rescaled_sma_slope, rescaled_rel_std
+    :return:
+    """
+    symbol = "AAPL"
+    csv_files = ["{}_20100104-20171013".format(symbol)]
+    # get raw, whole scale data
+    the_df = utility.get_cols_from_csv_names(csv_files,
+                                             interested_col=['Date', 'Close', 'Volume', 'Adj Close'],
+                                             join_spy_for_data_integrity=True,
+                                             keep_spy_if_not_having_spy=False)
+    adj_close_ser = the_df['{}_ADJ_CLOSE'.format(symbol)]
+    window_size = 20
+    rolling_norm = ta_indicators.get_window_normalized(adj_close_ser, window_size=window_size)
+
+    rolling_mean = ta_indicators.get_rolling_mean(adj_close_ser, window_size=window_size)
+    slope_rolling_mean = ta_indicators.get_daily_return(rolling_mean)
+    rolling_std = ta_indicators.get_rolling_std(adj_close_ser, window_size=window_size)
+    rel_rolling_std = rolling_std / rolling_mean
+    rel_rolling_std.rename("REL_{}".format(rolling_std.name), inplace=True)
+
+    rescaled_norm = utility.rescale(rolling_norm, False, "RESCALED_NORM")
+    rescaled_sma_slope = utility.rescale(slope_rolling_mean, False, "RESCALED_SMA_SLOPE")
+    rescaled_rel_std = utility.rescale(rel_rolling_std, False, "RESCALED_REL_STD")
+    combined_df = rescaled_norm.to_frame().join(rescaled_sma_slope, how="outer").join(rescaled_rel_std, how="outer")
+    print(combined_df)
+    # utility.plot_data(combined_df)
+    hmm_strategy.eval(feature_cols=[rescaled_norm, rescaled_sma_slope, rescaled_rel_std],
+                      close_col=adj_close_ser,
+                      num_state=6)
+
+
+def practice_hmm04():
+    """
+    using rescaled_norm, rescaled_sma_slope, rescaled_rel_std
+    :return:
+    """
+    symbol = "QQQ"
+    csv_files = ["{}_2003-01-06_2017-11-28".format(symbol)]
+    # get raw, whole scale data
+    the_df = utility.get_cols_from_csv_names(csv_files,
+                                             interested_col=['Date', 'Close', 'Volume', 'Adj Close'],
+                                             join_spy_for_data_integrity=False,
+                                             keep_spy_if_not_having_spy=False)
+    adj_close_ser = the_df['{}_ADJ_CLOSE'.format(symbol)]
+
+    ln_rtn = ta_indicators.get_ln_return(adj_close_ser)
+    ln_rtn.iloc[0] = 0.001
+    ln_rtn = utility.rescale(ln_rtn, False)
+    print(ln_rtn)
+    hmm_strategy.eval(feature_cols=[ln_rtn],
+                      close_col=adj_close_ser,
+                      num_state=9)
 
 
 def practice_np():
@@ -251,4 +324,4 @@ def practice_np():
 
 
 if __name__ == "__main__":
-    practice_hmm02()
+    practice_hmm04()

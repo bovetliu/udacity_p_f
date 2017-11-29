@@ -38,7 +38,7 @@ def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None) -> pd.
     if window_size <= 0:
         raise ValueError("window size should be larger than 0")
 
-    tbr = in_ser.rolling(window=window_size, min_periods=1).mean()
+    tbr = in_ser.rolling(window=window_size, min_periods=window_size).mean()
     tbr.name = '{}_MEAN_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
@@ -57,7 +57,7 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
         raise TypeError("in_ser should be pandas Series")
     if window_size <= 0:
         raise ValueError("window size should be larger than 0")
-    tbr = in_ser.ewm(span=window_size, min_periods=0, adjust=False).mean()
+    tbr = in_ser.ewm(span=window_size, min_periods=window_size, adjust=False).mean()
     tbr.name = '{}_EMA_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 
@@ -100,7 +100,7 @@ def get_frws(in_ser: pd.Series, window_size: int=1, name: str=None) -> pd.Series
     daily_return = get_daily_return(in_ser)
     daily_return_reversed = pd.Series(daily_return).reindex(daily_return.index[::-1])
     if window_size > 1:
-        daily_return_reversed_sum = daily_return_reversed.rolling(window=window_size).sum()
+        daily_return_reversed_sum = daily_return_reversed.rolling(window=window_size, min_periods=window_size).sum()
     else:
         daily_return_reversed_sum = daily_return_reversed
     tbr = daily_return_reversed_sum.reindex(daily_return_reversed_sum.index[::-1])

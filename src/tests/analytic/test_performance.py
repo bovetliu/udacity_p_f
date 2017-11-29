@@ -2,10 +2,11 @@ import unittest
 
 import pandas as pd
 
+from analytic import performance
 from analytic import utility
 
 
-class TestUtility(unittest.TestCase):
+class TestPerformance(unittest.TestCase):
 
     def test_get_relative_net_worth(self):
         data_frame = utility.get_cols_from_csv_names(['AAPL_20100104-20171013'],
@@ -16,7 +17,7 @@ class TestUtility(unittest.TestCase):
         data_frame = data_frame.loc['2017-09-28':'2017-10-13']
         signal = [0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0]
         data_frame = data_frame.assign(AAPL_SIGNAL=pd.Series(signal).values)
-        net_worth_ser = utility.get_relative_net_worth(data_frame, 'AAPL')
+        net_worth_ser = performance.get_relative_net_worth(data_frame, 'AAPL')
         self.assertAlmostEqual(1, net_worth_ser.iloc[0], 6)
         self.assertAlmostEqual(1, net_worth_ser.iloc[1], 6)
         self.assertAlmostEqual(1, net_worth_ser.iloc[2], 6)
