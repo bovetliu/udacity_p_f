@@ -1,0 +1,205 @@
+"""
+using bbands
+
+TODO
+intraday_loss_control = day_open * 0.985 TODO 0.985 can be calculated from intraday_loss_control((vix_cur - EMA10vix) / EMA10vix)
+
+"""
+
+import numpy
+import talib
+import pandas as pd
+# import matplotlib.pyplot as plt
+
+
+def initialize(context):
+    """
+    Called once at the start of the algorithm.
+    """
+    # Record tracking variables at the end of each day.
+    schedule_function(func=at_market_close,
+                      date_rule=date_rules.every_day(),
+                      time_rule=time_rules.market_close(),
+                      half_days=True)
+    context.running_status = 'running'
+    context.symbols = {}
+    # at this time, target_stock is AAPL
+    context.symbols["target_stock"] = sid(24)
+    # sid(19725)  # NVDA
+    # sid(5061) # MSFT
+    # sid(46632) # GOOGL
+    # sid(16841) # AMZN
+
+    # input parameters
+    context.inside_cushion = 0.03
+    context.outside_cushion = 0.005
+    context.span = 20
+    context.inday_fuse = 0.015
+
+    log.info("target_stock      : {}".format(context.symbols["target_stock"].symbol))
+    log.info("bband span        : {}".format(context.span ))
+    log.info("context.inday_fuse: {}".format(context.inday_fuse))
+    log.info("starting_cash     : {}".format(context.portfolio.starting_cash))
+
+
+    context.hist_data = {}
+    # strategy needed
+    context.cnt_of_resuming = 0
+    context.cnt_of_selling = 0
+    context.stop_gainloss = 0.0
+    context.reset_stop_gainloss = False
+    context.trading_day_open = 0
+    context.running_status = 'closed'
+
+    context.last_stop_time = None
+    context.last_stop_price = 0
+
+    # plot needed
+    context.first_time_before_trading = True
+    context.init_target_close = -1
+
+
+def at_market_close(context, data):
+    """
+    Called 1-3 minutes before market close,
+    """
+    to_be_recorded_map = {
+        context.symbols["target_stock"].symbol: data.current(context.symbols["target_stock"], 'price') / context.init_target_close,
+        'port_value': context.portfolio.portfolio_value / context.portfolio.starting_cash
+    }
+    record(**to_be_recorded_map)
+    cur_day_close = data.history(assets=context.symbols['target_stock'], fields='close', bar_count=1, frequency='1d')
+    context.hist_data['close_ser'] = context.hist_data['close_ser'].append(cur_day_close)
+    context.hist_data['close_ser'].drop(context.hist_data['close_ser'].index[0], inplace=True)
+
+    # following is not good.
+    # order_target_percent(context.symbols["target_stock"], 0.0)
+    amount = context.portfolio.positions[context.symbols['target_stock']].amount
+    log.info("at end of market {} : {}.".format(
+            context.symbols["target_stock"].symbol,
+            amount))
+
+    if amount == 0:
+        # stop_gainloss only reset when close without position
+        last_stop_time = context.last_stop_time
+        current_time_label = get_datetime('US/Eastern').strftime('%Y-%m-%d')
+        last_stop_time_label = last_stop_time.strftime('%Y-%m-%d')
+        log.info("current_time_label: {}, last_close_time_label: {}".format(current_time_label, last_stop_time_label))
+        window_size = len(context.hist_data['close_ser'].loc[last_stop_time_label:current_time_label]) - 1
+        if window_size > 0:
+            roc = talib.ROC(context.hist_data['close_ser'], timeperiod=window_size)
+            roc = pd.Series(roc, index=context.hist_data['close_ser'].index)
+            log.info("nearest {}-day ROC : {}%".format(window_size, round(roc.iloc[-1])))
+            mean = roc.mean()
+            std = roc.std()
+            last_roc = roc.iloc[-1]
+            roc_pos_in_distribution = (last_roc - mean) / 2 / std
+            log.info("ROC POS IN DISTRIBUTION : {}".format(roc_pos_in_distribution))
+            if roc_pos_in_distribution < -0.8:
+                context.reset_stop_gainloss = True
+
+
+def before_trading_start(context, data):
+    """
+    Called every day before market open.
+    """
+    context.cnt_of_resuming = 0
+    context.cnt_of_selling = 0
+    context.trading_day_open = 0
+
+    if context.first_time_before_trading:
+        context.first_time_before_trading = False
+        context.init_target_close = data.history(context.symbols["target_stock"], "close", 1, '1d')[0]
+        log.info("init_target_close {}".format(context.init_target_close))
+        close_ser = data.history(assets=context.symbols['target_stock'], fields='close', bar_count=120, frequency='1d')
+        context.hist_data['close_ser'] = close_ser
+
+    # log.info("len(context.hist_data['close_ser']) : {}".format( len(context.hist_data['close_ser'])))
+    sma = pd.Series(talib.SMA(context.hist_data['close_ser'], timeperiod=20), index=context.hist_data['close_ser'].index)
+    context.hist_data['sma'] = sma
+    sma_slopes = get_daily_return(sma)
+    context.hist_data['sma_slope_mean'] = sma_slopes.mean()
+    context.hist_data['sma_slope_std'] = sma_slopes.std()
+    log.info("sma_slope_mean: {}, sma_slope_std: {}".format(context.hist_data['sma_slope_mean'], context.hist_data['sma_slope_std']))
+
+    if context.reset_stop_gainloss:
+        context.reset_stop_gainloss = False
+        context.stop_gainloss = 0
+        log.info("reset stop_gainloss due to big negative ROC".format(context.stop_gainloss))
+
+
+
+def handle_data(context, data):
+    """
+    Called every minute.
+    """
+    # only handle regular trading time
+    recent_closes = context.hist_data['close_ser'].iloc[-context.span + 1: ]
+
+    # a pd.Series index by date, this is current days close
+    cur_price = data.history(context.symbols["target_stock"], 'close', 1, '1d')
+    cur_price_scalar = cur_price.iloc[-1]
+
+    # following will be used for calculating daily fuse
+    if context.trading_day_open == 0:
+        context.trading_day_open =  cur_price_scalar
+
+    recent_closes = pd.concat([recent_closes, cur_price])
+    # log.info("recent_closes: \n{}".format(recent_closes))
+    # at this time following variable are np Array
+    cur_hi, cur_sma, cur_lo = talib.BBANDS(recent_closes, timeperiod=context.span, nbdevup=2, nbdevdn=2, matype=0)
+    # turned into scalar value
+    cur_hi, cur_sma, cur_lo = cur_hi[-1], cur_sma[-1], cur_lo[-1]
+    two_sigma = cur_hi - cur_sma
+    # log.info("two_sigma: {}".format(two_sigma))
+
+    cur_sma_slope = (cur_sma - context.hist_data['sma'].iloc[-1]) / context.hist_data['sma'].iloc[-1]
+    # log.info("cur_sma: {}, prev_sma: {}, cur_sma_slope : {}".format(cur_sma, context.hist_data['sma'].iloc[-1], cur_sma_slope))
+    cur_sma_slope_rescaled = (cur_sma_slope - context.hist_data['sma_slope_mean']) / (2 * context.hist_data['sma_slope_std'])
+    cur_bb_pos = (cur_price_scalar - cur_sma) / two_sigma
+    # log.info("cur_sma_slope_rescaled: {}, cur_bb_pos: {}".format(cur_sma_slope_rescaled, cur_bb_pos))
+    calc_stop_gainloss(context, cur_sma_slope_rescaled, cur_bb_pos, cur_price_scalar)
+
+    final_stop_gainloss = max(context.trading_day_open * (1 - context.inday_fuse), context.stop_gainloss)
+    # can resume at most 5 times per day
+    if cur_price_scalar >= final_stop_gainloss * (1 + 0.001 * context.cnt_of_resuming) and context.cnt_of_selling < 5:
+        if context.running_status != 'running':
+            log.info("buying cur_price : {}, final_stop_gainloss: {}".format(cur_price_scalar, final_stop_gainloss))
+            context.cnt_of_resuming += 1
+            log.info("cnt_of_resuming : {}".format(context.cnt_of_resuming))
+        context.running_status = 'running'
+        order_target_percent(context.symbols["target_stock"], 1.0)
+    elif cur_price_scalar < final_stop_gainloss * (1 + 0.0005 * context.cnt_of_resuming):
+        if context.running_status != 'closed':
+            log.info("selling cur_price : {}, final_stop_gainloss: {}".format(cur_price_scalar, final_stop_gainloss))
+            context.cnt_of_selling += 1
+            log.info("cnt_of_selling : {}".format(context.cnt_of_selling))
+            context.last_stop_price = cur_price_scalar
+            context.last_stop_time = cur_price.index[0]
+            log.info("close at {} {} at price {}".format(type(context.last_stop_time), context.last_stop_time, context.last_stop_price))
+        context.running_status = 'closed'
+        order_target_percent(context.symbols["target_stock"], 0.0)
+
+
+def calc_stop_gainloss(context, sma_slope_rescaled, cur_bb_pos, cur_price):
+    """
+    return the stop gain loss line based on sma_slope_rescaled, current bband position, current price
+    """
+    if context.running_status == 'running':
+        if cur_bb_pos > 1.0:
+            context.stop_gainloss = max(context.stop_gainloss, cur_price * (1.0 - context.outside_cushion))
+        else:
+            context.stop_gainloss = max(context.stop_gainloss, cur_price * (1.0 - context.inside_cushion))
+    elif context.running_status == 'closed':
+        if cur_bb_pos < -1.0:
+            context.stop_gainloss = min(context.stop_gainloss, cur_price * (1.0 + context.outside_cushion))
+
+    # last_stop_time = context.last_stop_time
+    # last_stop_price = context.last_stop_price
+    # log.info("context.stop_gainloss : {}, cur_price: {}".format(context.stop_gainloss, cur_price))
+
+
+def get_daily_return(in_ser, name=None):
+    tbr = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
+    tbr.name = name if name else '{}_DRTN'.format(in_ser.name)
+    return tbr

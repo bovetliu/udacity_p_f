@@ -4,12 +4,12 @@ import warnings
 from sklearn import neighbors, preprocessing
 import pandas as pd
 import seaborn as sns
-from analytic import utility, performance, ta_indicators, hmm_strategy
+from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula
 
 from matplotlib import cm
 from matplotlib import pyplot as plt
 
-np.set_printoptions(suppress=True)
+# np.set_printoptions(suppress=True)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
@@ -291,7 +291,7 @@ def practice_hmm03():
 
 def practice_hmm04():
     """
-    using rescaled_norm, rescaled_sma_slope, rescaled_rel_std
+    using rescaled ln return
     :return:
     """
     symbol = "QQQ"
@@ -312,6 +312,38 @@ def practice_hmm04():
                       num_state=9)
 
 
+def practice_hehe():
+    symbol = "QQQ"
+    csv_files = ["{}_2003-01-06_2017-11-28".format(symbol)]
+    the_df = utility.get_cols_from_csv_names(csv_files,
+                                             interested_col=['Date', 'Close', 'Volume', 'Adj Close'],
+                                             join_spy_for_data_integrity=False,
+                                             keep_spy_if_not_having_spy=False)
+    adj_close_ser = the_df['{}_ADJ_CLOSE'.format(symbol)]
+    index_ser = pd.Series(np.array(range(0, len(adj_close_ser))), index=adj_close_ser.index, name='INDEX')
+
+    adj_close_df = pd.concat([adj_close_ser, index_ser], axis=1)
+    print(adj_close_df)
+
+    # task, calculate 5-day-in-same-month percent return
+    span = 5
+    adj_5_mom_ser = ta_indicators.get_momentum(adj_close_ser, span).dropna()
+    adj_5_mom_idx_ser = pd.Series(np.array(range(len(adj_5_mom_ser))), index=adj_5_mom_ser.index, name='INDEX')
+    adj_5_df = pd.concat([adj_5_mom_ser, adj_5_mom_idx_ser], axis=1)
+
+    adj_5_df = adj_5_df.loc[
+        adj_5_df['INDEX'][lambda idx: adj_close_df.index[idx].month == adj_5_df.index[idx].month].index]
+    print(adj_5_df)
+
+    nearest_100 = adj_5_df.iloc[-100:]
+    print(nearest_100)
+
+    ranked_ser = nearest_100['QQQ_ADJ_CLOSE_MOMEN_5'].rank()
+    ranked_ser.name = 'RANK'
+    nearest_100 = pd.concat([nearest_100, ranked_ser], axis=1)
+    print(nearest_100)
+
+
 def practice_np():
     a = np.array([0, 1, 2])
     print(np.tile(a, [2]))
@@ -322,6 +354,15 @@ def practice_np():
     print("=================")
     print(np.tile(np.identity(2), (3, 1, 1)))
 
+    x_array = np.array(list(range(-200, 200))) / 100.0
+    y_array = math_formula.perceptron(x_array, k=24, x_0=-0.8, y_span=0.2, b=0.004)
+    print(y_array)
+
+    plt.plot(x_array, y_array * 100)
+    plt.xlabel('x')
+    plt.ylabel('y%')
+    plt.show()
+
 
 if __name__ == "__main__":
-    practice_hmm04()
+    practice_hehe()
