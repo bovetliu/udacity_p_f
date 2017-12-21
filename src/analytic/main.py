@@ -35,7 +35,7 @@ def practice_knn():
     aapl_simple_mean_drtn_rescaled = utility.rescale(ta_indicators.get_daily_return(aapl_simple_mean))
     vol_window_normlzd = ta_indicators.get_window_normalized(aapl_df['AAPL_VOL'], window_size)
 
-    momentum_rescaled = utility.rescale(ta_indicators.get_momentum(aapl_series, 20))
+    momentum_rescaled = utility.rescale(ta_indicators.get_rocp(aapl_series, 20))
 
     # following are labels, without rescaling
     future_returns = ta_indicators.get_frws(aapl_series)
@@ -320,28 +320,10 @@ def practice_hehe():
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
     adj_close_ser = the_df['{}_ADJ_CLOSE'.format(symbol)]
-    index_ser = pd.Series(np.array(range(0, len(adj_close_ser))), index=adj_close_ser.index, name='INDEX')
-
-    adj_close_df = pd.concat([adj_close_ser, index_ser], axis=1)
-    print(adj_close_df)
-
-    # task, calculate 5-day-in-same-month percent return
     span = 5
-    adj_5_mom_ser = ta_indicators.get_momentum(adj_close_ser, span).dropna()
-    adj_5_mom_idx_ser = pd.Series(np.array(range(len(adj_5_mom_ser))), index=adj_5_mom_ser.index, name='INDEX')
-    adj_5_df = pd.concat([adj_5_mom_ser, adj_5_mom_idx_ser], axis=1)
+    rocp_5_in_month = ta_indicators.get_rocp(adj_close_ser, span, window_not_cross='month')
+    print(rocp_5_in_month)
 
-    adj_5_df = adj_5_df.loc[
-        adj_5_df['INDEX'][lambda idx: adj_close_df.index[idx].month == adj_5_df.index[idx].month].index]
-    print(adj_5_df)
-
-    nearest_100 = adj_5_df.iloc[-100:]
-    print(nearest_100)
-
-    ranked_ser = nearest_100['QQQ_ADJ_CLOSE_MOMEN_5'].rank()
-    ranked_ser.name = 'RANK'
-    nearest_100 = pd.concat([nearest_100, ranked_ser], axis=1)
-    print(nearest_100)
 
 
 def practice_np():

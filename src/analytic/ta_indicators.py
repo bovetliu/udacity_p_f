@@ -62,16 +62,35 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     return tbr
 
 
-# Momentum
-def get_momentum(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
+# ROCP rate of change percentage
+def get_rocp(in_ser: pd.Series, window_size: int, name: str = None, window_not_cross: str = None) -> pd.Series:
+    """
+    ROCP - Rate of change Percentage: (price-prevPrice)/prevPrice
+    """
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser should be pandas Series")
+    if window_not_cross not in ('month', 'day'):
+        raise ValueError("{} is not a valid property of a pd Timestamp", window_not_cross)
     # if window_size <= 0:
     #     raise ValueError("window size should be larger than 0")
-    moment_series = in_ser.diff(window_size)
-    moment_series = moment_series / in_ser.shift(window_size)
-    moment_series.name = '{}_MOMEN_{}'.format(in_ser.name, window_size) if not name else name
-    return moment_series
+    rocp_series = in_ser.diff(window_size)
+    rocp_series = rocp_series / in_ser.shift(window_size)
+    rocp_series.name = '{}_ROCP_{}'.format(in_ser.name, window_size) if not name else name
+    if not window_not_cross:
+        return rocp_series
+
+    rocp_series = rocp_series.dropna()
+    rocp_series_idx_ser = pd.Series(np.array(range(len(rocp_series))), index=rocp_series.index, name='INDEX')
+
+    if window_not_cross == 'month':
+        selected_labels = rocp_series_idx_ser[
+            lambda idx: in_ser.index[idx].month == rocp_series.index[idx].month].index
+    elif window_not_cross == 'day':
+        selected_labels = rocp_series_idx_ser[
+            lambda idx: in_ser.index[idx].day == rocp_series.index[idx].day].index
+    else:
+        raise Exception('impossible to reach')
+    return rocp_series.loc[selected_labels]
 
 
 def get_daily_return(in_ser: pd.Series, name: str=None) -> pd.Series:
