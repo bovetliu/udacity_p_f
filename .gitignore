@@ -1,4 +1,5 @@
 /src/rawdata
 /.idea
 *.pyc
+/src/rawdata
 */__pycache__/
