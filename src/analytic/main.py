@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula
 
+import math
 from matplotlib import cm
 from matplotlib import pyplot as plt
 
@@ -320,8 +321,22 @@ def practice_hehe():
                                              interested_col=requested_col,
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
+    the_df = the_df.loc[the_df.index > '2013-01-01']
     print(the_df.head(5))
-    ta_indicators.get_rolling_mean_consider_gap(the_df, 5)
+    intra_day_rtns, gap_rtns = ta_indicators.get_daily_return_2(the_df)
+    intra_day_rtns_name, gap_rtns_name = intra_day_rtns.name, gap_rtns.name
+    intra_day_rtns = intra_day_rtns.cumprod(axis=0)
+    gap_rtns = gap_rtns.cumprod(axis=0)
+    intra_day_rtns.name = intra_day_rtns_name
+    gap_rtns.name = gap_rtns_name
+
+    # gap_rtns = np.log10(gap_rtns)
+    # intra_day_rtns = np.log10(intra_day_rtns)
+    ax = intra_day_rtns.plot(title='COMPONENT DECOUPLE', legend=True)
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Return')
+    gap_rtns.plot(ax=ax, legend=True)
+    plt.show(block=True)
 
 
 def practice_np():

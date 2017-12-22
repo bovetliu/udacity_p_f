@@ -149,6 +149,40 @@ def get_daily_return(in_ser: pd.Series, name: str=None) -> pd.Series:
     return tbr
 
 
+def get_daily_return_2(
+        in_df: pd.DataFrame,
+        name_intraday: str=None,
+        name_gaps: str=None,
+        symbol: str=None) -> Tuple[pd.Series, pd.Series]:
+    """
+    decouple one OHLC into two components, and calculate daily return series.
+
+    :param in_df: stores at least Open, High, Low, Close,
+    :param name_intraday: intraday return series name
+    :param name_gaps: gap return series name
+    :param symbol: the symbol, like "NVDA"
+    :return: a tuple of 2 pandas series: intraday return sereis, gap return series
+    """
+    if not isinstance(in_df, pd.DataFrame):
+        raise TypeError("in_df should be pandas DataFrame")
+    if len(in_df) < 4:
+        raise ValueError("it is expected to have at least four columns, OPEN, HIGH, LOW, CLOSE")
+    col_names = in_df.columns.values.tolist()
+    closes = [col_name for col_name in col_names if __CLOSE_COL_PATTERN.match(col_name) is not None]
+    if len(closes) == 0:
+        raise ValueError("in_df could not find one column which has 'CLOSE'")
+    elif len(closes) > 1 and (not symbol):
+        raise ValueError("Found {} columns which have 'CLOSE' but symbol is invalid".format(len(closes)))
+    if len(closes) == 1 and not symbol:
+        symbol = closes[0].split('_')[0]
+    gaps_rtn = in_df[symbol + "_OPEN"] / in_df[symbol + "_CLOSE"].shift(1)
+    gaps_rtn.iloc[0] = 1.0  # assume first gap is 0
+    gaps_rtn.name = name_gaps if name_gaps else '{}_GAP_RTN'.format(symbol)
+    intra_day_rtn = in_df[symbol + "_CLOSE"] / in_df[symbol + "_OPEN"]
+    intra_day_rtn.name = name_intraday if name_intraday else '{}_INTRADAY_RTN'.format(symbol)
+    return intra_day_rtn, gaps_rtn
+
+
 def get_ln_return(in_ser: pd.Series, name: str=None) -> pd.Series:
     tbr = in_ser.apply(np.log) - in_ser.shift(1).apply(np.log)
     tbr.name = name if name else '{}_LNRTN'.format(in_ser.name)
