@@ -315,15 +315,13 @@ def practice_hmm04():
 def practice_hehe():
     symbol = "QQQ"
     csv_files = ["{}_2003-01-06_2017-11-28".format(symbol)]
+    requested_col = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
     the_df = utility.get_cols_from_csv_names(csv_files,
-                                             interested_col=['Date', 'Close', 'Volume', 'Adj Close'],
+                                             interested_col=requested_col,
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
-    adj_close_ser = the_df['{}_ADJ_CLOSE'.format(symbol)]
-    span = 5
-    rocp_5_in_month = ta_indicators.get_rocp(adj_close_ser, span, window_not_cross='month')
-    print(rocp_5_in_month)
-
+    print(the_df.head(5))
+    ta_indicators.get_rolling_mean_consider_gap(the_df, 5)
 
 
 def practice_np():

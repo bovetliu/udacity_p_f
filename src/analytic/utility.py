@@ -87,7 +87,7 @@ def get_cols_from_csv_names(file_names: List[str],
 def plot_data(df, title="Stock prices", ylabel="Price") -> None:
     """
     Plot stock prices
-    :param df: data frame, not Null
+    :param df: data frame, not Null, not necessarily data frame, pandas Series is also okay
     :param title: title of the plot
     :param ylabel: label of y axis
     :return: None
@@ -95,8 +95,6 @@ def plot_data(df, title="Stock prices", ylabel="Price") -> None:
     axes_sub_plot = df.plot(title=title)
     axes_sub_plot.set_xlabel("Date")
     axes_sub_plot.set_ylabel(ylabel)
-    # axes_sub_plot.set_xlabel("Date")
-    # axes_sub_plot.set_ylable("Price") no longer works
 
     plt.show(block=True)
 
