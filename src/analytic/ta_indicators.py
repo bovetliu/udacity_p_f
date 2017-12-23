@@ -48,51 +48,6 @@ def get_rolling_mean(in_ser: pd.Series, window_size: int, name: str=None) -> pd.
     return tbr
 
 
-def get_rolling_mean_consider_gap(in_df: pd.DataFrame, window_zize: int, name: str=None, symbol: str=None) -> pd.Series:
-    """
-    try to find a set of open, high low, close columns in incomding data frame. If there are more than one set of
-    them, needs to check stock symbol.
-    :param in_df: stores at least Open, High, Low, Close,
-    :param window_zize: window size of rolling mean
-    :param name: name of returned series
-    :param symbol: the symbol of to be processed data frame
-    :return: a simple moving average considering gap
-    """
-    if not isinstance(in_df, pd.DataFrame):
-        raise TypeError("in_df should be pandas DataFrame")
-    if len(in_df) < 4:
-        raise ValueError("it is expected to have at least four columns, OPEN, HIGH, LOW, CLOSE")
-    col_names = in_df.columns.values.tolist()
-    closes = [col_name for col_name in col_names if __CLOSE_COL_PATTERN.match(col_name) is not None]
-    if len(closes) == 0:
-        raise ValueError("in_df could not find one column which has 'CLOSE'")
-    elif len(closes) > 1 and (not symbol):
-        raise ValueError("Found {} columns which have 'CLOSE' but symbol is invalid".format(len(closes)))
-    if len(closes) == 1 and not symbol:
-        symbol = closes[0].split('_')[0]
-    # print(symbol)
-    gaps = (in_df[symbol + "_OPEN"] - in_df[symbol + "_CLOSE"].shift(1))
-    gaps.iloc[0] = 0.0  # assume first gap is 0
-    gaps_cumsum = gaps.cumsum(axis=0)
-    gaps_cumsum.name = 'QQQ_GAP_CUMSUM'
-
-    # print("inversed gaps_cumsum: ")
-    # print((-gaps_cumsum).head(272))
-    # utility.plot_data(gaps_cumsum, title='gaps', ylabel='gaps')
-    # print(in_df.head())
-    removed_gaps = pd.concat(
-        [in_df.drop(columns=symbol + '_VOLUME').add(-gaps_cumsum, axis=0), in_df[symbol + '_VOLUME']], axis=1)
-    print(type(removed_gaps))
-    ax = removed_gaps['QQQ_CLOSE'].plot(title='QQQ_gaps_detached', legend=True)
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Price')
-    gaps_cumsum.plot(ax=ax, legend=True)
-    plt.show(block=True)
-    print(removed_gaps.head())
-
-    pass
-
-
 def get_ema(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
     """
     get ema of a series, if name is not supplied, the to-be-returned series will have name of
@@ -264,7 +219,7 @@ def get_atr(df, n):
 def get_bbands(in_ser: pd.Series,
                window_size: int,
                upper_band_name: str=None,
-               lower_band_name: str=None) -> Tuple[pd.Series, pd.Series]:
+               lower_band_name: str=None) -> Tuple[pd.Series, pd.Series, pd.Series]:
     """Return relative positions in band."""
     rolling_mean = get_rolling_mean(in_ser, window_size)
     rolling_std = get_rolling_std(in_ser, window_size)
@@ -274,7 +229,7 @@ def get_bbands(in_ser: pd.Series,
 
     lower_band = rolling_mean - rolling_std.mul(2)
     lower_band.name = lower_band_name if lower_band_name else '{}_LOWBB_{}'.format(in_ser.name, window_size)
-    return upper_band, lower_band
+    return upper_band, rolling_mean, lower_band
 
 
 # Pivot Points, Supports and Resistances

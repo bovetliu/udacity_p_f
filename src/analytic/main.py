@@ -321,7 +321,7 @@ def practice_hehe():
                                              interested_col=requested_col,
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
-    the_df = the_df.loc[the_df.index > '2013-01-01']
+    the_df = the_df.loc[the_df.index > '2016-01-01']
     print(the_df.head(5))
     intra_day_rtns, gap_rtns = ta_indicators.get_daily_return_2(the_df)
     intra_day_rtns_name, gap_rtns_name = intra_day_rtns.name, gap_rtns.name
@@ -332,10 +332,26 @@ def practice_hehe():
 
     # gap_rtns = np.log10(gap_rtns)
     # intra_day_rtns = np.log10(intra_day_rtns)
-    ax = intra_day_rtns.plot(title='COMPONENT DECOUPLE', legend=True)
+
+    intra_day_rtns_upper, intra_day_rtns_sma, intra_day_rtns_lower = ta_indicators.get_bbands(intra_day_rtns, 20)
+    gap_rtns_upper, gap_rtns_sma, gap_rtns_lower = ta_indicators.get_bbands(gap_rtns, 30)
+
+    plt.figure(figsize=(9, 6))
+    ax = intra_day_rtns.plot(title='INTRADAY COMPONENT', legend=True)
     ax.set_xlabel('Date')
     ax.set_ylabel('Return')
-    gap_rtns.plot(ax=ax, legend=True)
+    intra_day_rtns_upper.plot(ax=ax, legend=True)
+    intra_day_rtns_sma.plot(ax=ax, legend=True)
+    intra_day_rtns_lower.plot(ax=ax, legend=True)
+    # plt.show()
+
+    plt.figure(figsize=(9, 6))
+    ax2 = gap_rtns.plot(title='GAP COMPONENT', legend=True)
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('Return')
+    gap_rtns_upper.plot(ax=ax2, legend=True)
+    gap_rtns_sma.plot(ax=ax2, legend=True)
+    gap_rtns_lower.plot(ax=ax2, legend=True)
     plt.show(block=True)
 
 
