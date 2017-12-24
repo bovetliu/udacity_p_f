@@ -118,3 +118,15 @@ def rescale(in_ser: pd.Series, shift_so_zero_mean: bool=False, name: str=None):
     tbr.rename(name if name else "RESCALED_{}".format(in_ser.name), inplace=True)
     return tbr
 
+
+def get_appropriate_file(symbol):
+    map = {
+        "AAPL": "AAPL_20121114_20171114",
+        "QQQ": "QQQ_2003-01-06_2017-11-28",
+        "SPY": "SPY_20090102-20171017",
+        "XOM": "XOM_20100104-20171013",
+        "IBM": "IBM_20100104-20171013",
+        "UVXY": "UVXY_20111223-20171222"
+    }
+    return map[symbol]
+

@@ -33,7 +33,7 @@ def get_relative_net_worth(data_frame: pd.DataFrame, symbol: str) -> pd.Series:
                 current_position = pending_action
             else:
                 raise ValueError("Unrecognized sig value {}".format(pending_action))
-            # prev_price always record a check point
+            # prev_rtn always record a check point
             prev_price = cur_price
 
         # end of market opening, now it is end of market

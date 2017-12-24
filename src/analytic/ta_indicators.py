@@ -130,10 +130,11 @@ def get_daily_return_2(
         raise ValueError("Found {} columns which have 'CLOSE' but symbol is invalid".format(len(closes)))
     if len(closes) == 1 and not symbol:
         symbol = closes[0].split('_')[0]
-    gaps_rtn = in_df[symbol + "_OPEN"] / in_df[symbol + "_CLOSE"].shift(1)
-    gaps_rtn.iloc[0] = 1.0  # assume first gap is 0
+    close_right_shift_1 = in_df[symbol + "_CLOSE"].shift(1)
+    gaps_rtn = (in_df[symbol + "_OPEN"] - close_right_shift_1) / close_right_shift_1
+    gaps_rtn.iloc[0] = 0.0  # assume first gap is 0
     gaps_rtn.name = name_gaps if name_gaps else '{}_GAP_RTN'.format(symbol)
-    intra_day_rtn = in_df[symbol + "_CLOSE"] / in_df[symbol + "_OPEN"]
+    intra_day_rtn = (in_df[symbol + "_CLOSE"] - in_df[symbol + "_OPEN"]) / in_df[symbol + "_OPEN"]
     intra_day_rtn.name = name_intraday if name_intraday else '{}_INTRADAY_RTN'.format(symbol)
     return intra_day_rtn, gaps_rtn
 
@@ -245,6 +246,19 @@ def get_ppsr(df):
     PSR = pd.DataFrame(psr)
     df = df.join(PSR)
     return df
+
+
+def remove_shunhao(in_ser: pd.Series, name: str=None):
+    """
+    remove shunhao
+    """
+    if not isinstance(in_ser, pd.Series):
+        raise TypeError("in_ser must be pandas Series")
+    last_day = in_ser.index.max()
+    removed_arr = pd.Series([in_ser.loc[date] * 10**((date - last_day).days / 365.0) for date in in_ser.index],
+                            index=in_ser.index)
+    removed_arr.name = in_ser.name + "_RM_SHUNHAO" if not name else name
+    return removed_arr
 
 
 # Stochastic oscillator %K
