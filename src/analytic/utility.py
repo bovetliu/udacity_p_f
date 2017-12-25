@@ -121,6 +121,7 @@ def rescale(in_ser: pd.Series, shift_so_zero_mean: bool=False, name: str=None):
 
 def get_appropriate_file(symbol):
     map = {
+        "AMD": "AMD_20151224-20171222",
         "AAPL": "AAPL_20121114_20171114",
         "QQQ": "QQQ_2003-01-06_2017-11-28",
         "SPY": "SPY_20090102-20171017",

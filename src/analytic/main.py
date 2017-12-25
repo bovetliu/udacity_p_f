@@ -333,22 +333,33 @@ def practice_uvxy_shunhao():
 
 
 def practice_component_decomposing():
-    symbol = "QQQ"
+    symbol = "AMD"
     csv_files = [utility.get_appropriate_file(symbol)]
     requested_col = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
     the_df = utility.get_cols_from_csv_names(csv_files,
                                              interested_col=requested_col,
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
-    the_df = the_df.loc[the_df.index >= '2015-10-06']
+    the_df = the_df.loc[the_df.index >= '2017-01-06']
     print(the_df.head(5))
     intra_day_rtns, gap_rtns = ta_indicators.get_daily_return_2(the_df)
+    normal_rtn = ta_indicators.get_daily_return(the_df['{}_CLOSE'.format(symbol)]).add(1.0, axis=0).cumprod(axis=0)
+    normal_rtn.name = 'AMD_RTN'
     intra_day_rtns_name, gap_rtns_name = intra_day_rtns.name, gap_rtns.name
     print(intra_day_rtns.head(10))
 
-    print(intra_day_rtns.head(10))
     print('mean: {}, std: {}'.format(intra_day_rtns.mean(), intra_day_rtns.std()))
-    intra_day_rtns.plot.hist()
+    # intra_day_rtns.hist()
+
+    intra_day_rtns_add_1 = intra_day_rtns.add(1.0).cumprod(axis=0)
+    intra_day_rtns_add_1.name = 'AMD_INTRADAY_RTN'
+    print(intra_day_rtns_add_1.head(10))
+    ax = intra_day_rtns_add_1.plot(title="intra_day_rtn_cumprod", legend=True, figsize=(14, 7))
+    gap_rtns_add_1 = gap_rtns.add(1.0, axis=0).cumprod(axis=0)
+    gap_rtns_add_1.name = 'AMD_GAP_RTN'
+    gap_rtns_add_1.plot(ax=ax, legend=True)
+    normal_rtn.plot(ax=ax, legend=True)
+
     # intra_day_rtns = intra_day_rtns.cumprod(axis=0)
 
 
@@ -391,4 +402,4 @@ def practice_np():
 
 
 if __name__ == "__main__":
-    practice_uvxy_shunhao()
+    practice_component_decomposing()
