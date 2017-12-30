@@ -418,7 +418,9 @@ def practice_algo_trading_chap2():
     the_df = the_df.loc[(the_df.index >= '2006-04-04') & (the_df.index <= '2012-04-09')]
     print(the_df.head())
     show_plot1 = False
-    show_scatter_plot = False
+    show_scatter_plot_ewa_ewc = False
+    show_residual_plot = True
+    show_scatter_plot_residual = False
 
     if show_plot1:
         plot1 = the_df.plot(legend=True, title="EWA, EWC share prices")
@@ -428,11 +430,12 @@ def practice_algo_trading_chap2():
 
     # EWA as x array
     ewa_ser = the_df['{}_ADJ_CLOSE'.format(symbols[0])]
+    # EWC as y array
     ewc_ser = the_df['{}_ADJ_CLOSE'.format(symbols[1])]
-    if show_scatter_plot:
+    if show_scatter_plot_ewa_ewc:
         plt.scatter(
-            ewa_ser.values,
-            ewc_ser.values,
+            ewa_ser.values,   # x
+            ewc_ser.values,   # y
             marker='.',
             alpha=0.5
         )
@@ -449,7 +452,41 @@ def practice_algo_trading_chap2():
     print('ols_results.tvalues: {}'.format(ols_results.tvalues))
     print(ols_results.summary())
 
+    hedge_ratio = ols_results.params[0]
+    residual_ser = ewc_ser + ewa_ser.multiply(-hedge_ratio)
+    if show_residual_plot:
+        ax = residual_ser.plot(title='EWC - hedgeRatio * EWA')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('EWC - hedgeRatio * EWA')
+        plt.show(block=True)
+    the_df = the_df.assign(RESIDUAL=residual_ser.values)
+    print(the_df.head())
+    cadf_result = ts.adfuller(the_df['RESIDUAL'], maxlag=1, regression='c')
+    pprint.pprint(cadf_result)
 
+    # calculating Half-Life of mean reversion
+    residual_ser_daily_rtn = ta_indicators.get_daily_return(the_df['RESIDUAL'], relative=False)
+    residual_ser_daily_rtn.dropna(inplace=True)
+    residual_lag = the_df['RESIDUAL'].shift(1)
+    residual_lag.dropna(inplace=True)
+    print('len(residual_ser_daily_rtn): {}, len(residual_lag): {}'.format(
+        len(residual_ser_daily_rtn),
+        len(residual_lag)))
+    if show_scatter_plot_residual:
+        plt.scatter(residual_ser_daily_rtn.values, residual_lag.values, marker='.', alpha=0.5)
+        plt.xlabel(the_df['RESIDUAL'].name)
+        plt.ylabel(residual_ser_daily_rtn.name)
+        plt.title('Scatter Plot of RESIDUAL versus RESIDUAL_RTN')
+        plt.show(block=True)
+
+    ols_residual_model = sm.OLS(residual_ser_daily_rtn.values, residual_lag.values)
+    ols_redidual_results = ols_residual_model.fit()
+    print('ols_redidual_results.params: {}'.format(ols_redidual_results.params))
+    print('ols_redidual_results.tvalues: {}'.format(ols_redidual_results.tvalues))
+    print(ols_redidual_results.summary())
+    # TODO(Bowei) figure out half life of delay formula : -log(2) / lambda, the log base is e or 10.
+    halflife = (- math.log(2)) / ols_redidual_results.params[0]
+    print('halflife: {}'.format(halflife))
 
 
 if __name__ == "__main__":

@@ -98,8 +98,10 @@ def get_rocp(in_ser: pd.Series, window_size: int, name: str = None, window_not_c
     return rocp_series.loc[selected_labels]
 
 
-def get_daily_return(in_ser: pd.Series, name: str=None) -> pd.Series:
-    tbr = (in_ser - in_ser.shift(1)) / in_ser.shift(1)
+def get_daily_return(in_ser: pd.Series, name: str=None, relative=True) -> pd.Series:
+    tbr = in_ser - in_ser.shift(1)
+    if relative:
+        tbr = tbr / in_ser.shift(1)
     tbr.name = name if name else '{}_DRTN'.format(in_ser.name)
     return tbr
 
