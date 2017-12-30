@@ -4,11 +4,14 @@ import warnings
 from sklearn import neighbors, preprocessing
 import pandas as pd
 import seaborn as sns
+import pprint
 from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula
 
 import math
 from matplotlib import cm
 from matplotlib import pyplot as plt
+import statsmodels.api as sm
+import statsmodels.tsa.stattools as ts
 
 # np.set_printoptions(suppress=True)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -390,5 +393,51 @@ def practice_np():
     plt.show()
 
 
+def practice_algo_trading_chap2():
+    symbols = ('EWA','EWC')
+    csv_files = [utility.get_appropriate_file(symbol) for symbol in symbols]
+    requested_col = ['Date', 'Adj Close']
+    the_df = utility.get_cols_from_csv_names(file_names=csv_files,
+                                             interested_col=requested_col,
+                                             join_spy_for_data_integrity=False,
+                                             keep_spy_if_not_having_spy=False)
+
+    the_df = the_df.loc[(the_df.index >= '2006-04-04') & (the_df.index <= '2012-04-09')]
+    print(the_df.head())
+    show_plot1 = False
+    show_scatter_plot = False
+
+    if show_plot1:
+        plot1 = the_df.plot(legend=True, title="EWA, EWC share prices")
+        plot1.set_xlabel('Date')
+        plot1.set_ylabel('Share price $')
+        plt.show()
+
+    # EWA as x array
+    ewa_ser = the_df['{}_ADJ_CLOSE'.format(symbols[0])]
+    ewc_ser = the_df['{}_ADJ_CLOSE'.format(symbols[1])]
+    if show_scatter_plot:
+        plt.scatter(
+            ewa_ser.values,
+            ewc_ser.values,
+            marker='.',
+            alpha=0.5
+        )
+        plt.xlabel(ewa_ser.name)
+        plt.ylabel(ewc_ser.name)
+        plt.title('Scatter Plot of EWA versus EWC')
+        plt.show(block=True)
+    print('len(ewa_ser): {}, len(ewc_ser): {}'.format(len(ewa_ser), len(ewc_ser)))
+
+    # Calculate optimal hedge ratio "beta"
+    ols_model = sm.OLS(ewc_ser.values, ewa_ser.values)
+    ols_results = ols_model.fit()
+    print('ols_results.params: {}'.format(ols_results.params))
+    print('ols_results.tvalues: {}'.format(ols_results.tvalues))
+    print(ols_results.summary())
+
+
+
+
 if __name__ == "__main__":
-    practice_uvxy_shunhao()
+    practice_algo_trading_chap2()
