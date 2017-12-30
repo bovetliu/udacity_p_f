@@ -358,6 +358,8 @@ def practice_component_decomposing():
     intra_day_rtns_add_1.name = 'AMD_INTRADAY_RTN'
     print(intra_day_rtns_add_1.head(10))
     ax = intra_day_rtns_add_1.plot(title="intra_day_rtn_cumprod", legend=True, figsize=(14, 7))
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Return')
     gap_rtns_add_1 = gap_rtns.add(1.0, axis=0).cumprod(axis=0)
     gap_rtns_add_1.name = 'AMD_GAP_RTN'
     gap_rtns_add_1.plot(ax=ax, legend=True)
