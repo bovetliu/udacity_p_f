@@ -387,27 +387,23 @@ def practice_component_decomposing():
 
 
 def practice_np():
-    a = np.array([0, 1, 2])
-    print(np.tile(a, [2]))
-    print("=================")
-    print(np.tile(a, [1, 2]))
-    print("=================")
-    print(np.tile(a, [2, 1, 2]))
-    print("=================")
-    print(np.tile(np.identity(2), (3, 1, 1)))
+    x = np.asarray([1, 2]).reshape((1, 2))
+    beta = np.zeros(2)
+    print(beta)
+    print(x.dot(beta))
 
-    x_array = np.array(list(range(-200, 200))) / 100.0
-    y_array = math_formula.perceptron(x_array, k=24, x_0=-0.8, y_span=0.2, b=0.004)
-    print(y_array)
-
-    plt.plot(x_array, y_array * 100)
-    plt.xlabel('x')
-    plt.ylabel('y%')
-    plt.show()
+    x = np.array([1, 2]).reshape(1, 2)
+    r = np.array([1, 2, 3, 4]).reshape((2, 2))
+    res = x @r @x.T
+    print(res)
+    res = x.dot(r).dot(x.T)
+    print(res)
+    res = x * r
+    print(res)
 
 
 def practice_algo_trading_chap2():
-    symbols = ('EWA','EWC')
+    symbols = ('EWA', 'EWC')
     csv_files = [utility.get_appropriate_file(symbol) for symbol in symbols]
     requested_col = ['Date', 'Adj Close']
     the_df = utility.get_cols_from_csv_names(file_names=csv_files,
@@ -415,17 +411,17 @@ def practice_algo_trading_chap2():
                                              join_spy_for_data_integrity=False,
                                              keep_spy_if_not_having_spy=False)
 
-    the_df = the_df.loc[(the_df.index >= '2006-04-04') & (the_df.index <= '2012-04-09')]
+    the_df = the_df.loc[(the_df.index >= '2013-01-04') & (the_df.index <= '2017-12-28')]
     print(the_df.head())
-    show_plot1 = False
-    show_scatter_plot_ewa_ewc = False
+    show_day_day_close = True
+    show_scatter_plot_ewa_ewc = True
     show_residual_plot = True
-    show_scatter_plot_residual = False
+    show_scatter_plot_residual = True
 
-    if show_plot1:
-        plot1 = the_df.plot(legend=True, title="EWA, EWC share prices")
-        plot1.set_xlabel('Date')
-        plot1.set_ylabel('Share price $')
+    if show_day_day_close:
+        day_day_close = the_df.plot(legend=True, title="EWA, EWC share prices")
+        day_day_close.set_xlabel('Date')
+        day_day_close.set_ylabel('Share price $')
         plt.show()
 
     # EWA as x array
@@ -484,9 +480,83 @@ def practice_algo_trading_chap2():
     print('ols_redidual_results.params: {}'.format(ols_redidual_results.params))
     print('ols_redidual_results.tvalues: {}'.format(ols_redidual_results.tvalues))
     print(ols_redidual_results.summary())
-    # TODO(Bowei) figure out half life of delay formula : -log(2) / lambda, the log base is e or 10.
+    # log base is e
     halflife = (- math.log(2)) / ols_redidual_results.params[0]
     print('halflife: {}'.format(halflife))
+
+
+def practice_algo_trading_chap3_kalman():
+    symbols = ('EWA', 'EWC')
+    show_e_sqrt_q = True
+    show_price_spread = True
+    show_hedge_ratio_treand = False
+    show_intercept_trend = False
+    csv_files = [utility.get_appropriate_file(symbol) for symbol in symbols]
+    requested_col = ['Date', 'Adj Close']
+    the_df = utility.get_cols_from_csv_names(file_names=csv_files,
+                                             interested_col=requested_col,
+                                             join_spy_for_data_integrity=False,
+                                             keep_spy_if_not_having_spy=False)
+    the_df = the_df.loc[(the_df.index >= '2008-01-01') & (the_df.index <= '2013-12-29')]
+
+    delta = 0.0001
+    Vw = delta / (1 - delta) * np.eye(2)      # state covariance prediction noise covariance Qk of official wiki
+    Ve = 0.001                                # measurement noise covariance part of Rk of official wiki
+
+    beta = np.zeros(2)  # 1 * 2 matrix
+    P = np.zeros((2, 2))
+    R = np.zeros((2, 2))
+
+    hedge_ratios = []
+    intercepts = []
+    e_s = []
+    sqrt_q_s = []
+    for t in range(0, len(the_df)):
+        x = np.array([the_df['{}_ADJ_CLOSE'.format('EWA')].iloc[t], 1.0]).reshape((1, 2))
+        y = the_df['{}_ADJ_CLOSE'.format('EWC')].iloc[t]
+        if t > 0:
+            beta = beta
+            R = P + Vw
+
+        yhat = x.dot(beta)
+        # print(yhat)
+        Q = x.dot(R).dot(x.T) + Ve
+        sqrt_Q = np.sqrt(Q)
+        e = y - yhat
+        K = R.dot(x.T) / Q
+        beta = beta + K.flatten() * e
+        P = R - K * x.dot(R)
+
+        hedge_ratios.append(beta[0])
+        intercepts.append(beta[1])
+        if e[0] < 5.0:
+            e_s.append(e[0])
+            sqrt_q_s.append(sqrt_Q[0][0])
+        else:
+            e_s.append(None)
+            sqrt_q_s.append(sqrt_Q[0][0])
+    hedge_ratios = pd.Series(hedge_ratios, the_df.index, name="HEDGE_RATIO")
+    intercepts = pd.Series(intercepts, the_df.index, name="INTERCEPT")
+    e_s = pd.Series(e_s, the_df.index, name="Predition-Measurement_Error")
+    print(e_s.head())
+    sqrt_q_s = pd.Series(sqrt_q_s, the_df.index, name="SQRT_Q")
+
+    if show_e_sqrt_q:
+        ax = e_s.plot(title='Prediction Error vs sqrt(Q)', legend=True)
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Prediction Error')
+        rolling_std = ta_indicators.get_rolling_std(e_s, 20)
+        rolling_std.plot(ax=ax, legend=True)
+        minus_rolling_std = rolling_std.multiply(-1.0)
+        minus_rolling_std.name = '-' + rolling_std.name
+        minus_rolling_std.plot(ax=ax, legend=True)
+        plt.show(True)
+    if show_hedge_ratio_treand:
+        hedge_ratios.plot(title='hedge ratio trend', legend=True)
+        plt.show(True)
+    if show_intercept_trend:
+        intercepts.plot(title='intercepts trend', legend=True)
+        plt.show(True)
 
 
 if __name__ == "__main__":
