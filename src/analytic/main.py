@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 from hmmlearn import hmm
 import warnings
@@ -5,13 +7,14 @@ from sklearn import neighbors, preprocessing
 import pandas as pd
 import seaborn as sns
 import pprint
-from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula
+from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula, statistics, visual
 
 import math
 from matplotlib import cm
 from matplotlib import pyplot as plt
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
+from scipy import stats
 
 # np.set_printoptions(suppress=True)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -559,5 +562,59 @@ def practice_algo_trading_chap3_kalman():
         plt.show(True)
 
 
+def practice_slump_prevention():
+    symbols = ('AMAT', )
+    csv_files = [utility.get_appropriate_file(symbol) for symbol in symbols]
+    requested_col = ['time', 'high', 'low', 'open', 'close']
+    the_df = utility.get_cols_from_csv_names(file_names=csv_files,
+                                             interested_col=requested_col,
+                                             join_spy_for_data_integrity=False,
+                                             keep_spy_if_not_having_spy=False)
+    daily_grp = the_df.groupby(pd.Grouper(level=0, freq='1d'))
+    daily_rtn = (daily_grp['AMAT_CLOSE'].last() - daily_grp['AMAT_OPEN'].first()) / daily_grp['AMAT_OPEN'].first()
+    daily_rtn = daily_rtn.dropna()
+    daily_rtn.name = "AMAT_RTN"
+
+    rocp = ta_indicators.get_rocp(the_df['AMAT_CLOSE'], '60s', None, expanding=True)
+
+    # 2017-11-13  -> 2017-11-20, 2017-11-17 da die
+    rocp_selected = rocp.loc['2017-11-17']
+
+    # get rolling t-test
+    rocp_mean = rocp.mean()
+    rocp_std = rocp.std()
+    rocp_nobs = len(rocp)
+
+    pd_timestamp = pd.Timestamp('2017-11-17 10:15:00')
+    # print(rocp_selected.index)
+    print(rocp_selected.loc[rocp_selected.index < pd_timestamp].tail())
+    kwargs = {
+        "mean2": rocp_mean,
+        "std2": rocp_std,
+        "nobs2": rocp_nobs
+    }
+    rolling_pvalue = rocp_selected.rolling(window=10, min_periods=1).apply(statistics.pvalue, kwargs=kwargs)
+
+    # print(rolling_pvalue)
+    the_df_selected = the_df.loc['2017-11-17']
+    col_name_map = {
+        'open': 'AMAT_OPEN',
+        'high': 'AMAT_HIGH',
+        'low': 'AMAT_LOW',
+        'close': 'AMAT_CLOSE',
+    }
+
+
+    # visual.plot_candles(the_df_selected, col_name_map, title="AMAT MIN BARS")
+    # plt.show()
+
+    rolling_pvalue.plot()
+    plt.show()
+
+
+
+
+
+
 if __name__ == "__main__":
-    practice_algo_trading_chap2()
+    practice_slump_prevention()

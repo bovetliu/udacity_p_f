@@ -62,14 +62,20 @@ def get_cols_from_csv_names(file_names: List[str],
         temp_symbol = file_name.split('_', 1)[0]
         col_rename_map = {
             'Adj Close': "{}_ADJ_CLOSE".format(temp_symbol),
+            'close': "{}_CLOSE".format(temp_symbol),
             'Close': "{}_CLOSE".format(temp_symbol),
+            'open': "{}_OPEN".format(temp_symbol),
             'Open': "{}_OPEN".format(temp_symbol),
+            'high': "{}_HIGH".format(temp_symbol),
             'High': "{}_HIGH".format(temp_symbol),
+            'low': "{}_LOW".format(temp_symbol),
             'Low': "{}_LOW".format(temp_symbol),
+            'time': 'Date',
+            'volume': "{}_VOLUME".format(temp_symbol),
             'Volume': "{}_VOLUME".format(temp_symbol),
         }
         df_temp = pd.read_csv("{}/{}.csv".format(base_dir, file_name),
-                              index_col='Date',
+                              index_col='Date' if 'Date' in interested_col else 'time',
                               parse_dates=True,
                               usecols=interested_col,
                               na_values=['NaN']).rename(columns=col_rename_map)
@@ -122,6 +128,7 @@ def rescale(in_ser: pd.Series, shift_so_zero_mean: bool=False, name: str=None):
 def get_appropriate_file(symbol):
     map = {
         "AMD": "AMD_20151224-20171222",
+        "AMAT": "AMAT_to_2018-01-05",
         "AAPL": "AAPL_20121114_20171114",
         "EWA": "EWA_20060103_20171228",
         "EWC": "EWC_20060103_20171228",
