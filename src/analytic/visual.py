@@ -3,7 +3,13 @@ import numpy as np
 import pandas as pd
 
 
-def plot_candles(pricing, name_map=None, title=None, volume_bars=False, color_function=None, technicals=None):
+def plot_candles(pricing,
+                 name_map=None,
+                 title=None,
+                 volume_bars=False,
+                 color_function=None,
+                 technicals=None,
+                 ):
     """ Plots a candlestick chart using quantopian pricing data.
 
     Author: Daniel Treiman
@@ -27,10 +33,13 @@ def plot_candles(pricing, name_map=None, title=None, volume_bars=False, color_fu
     oc_min = pd.concat([open_price, close_price], axis=1).min(axis=1)
     oc_max = pd.concat([open_price, close_price], axis=1).max(axis=1)
 
+    fig_kw = {
+        "figsize": (15, 12)
+    }
     if volume_bars:
         fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [3, 1]})
     else:
-        fig, ax1 = plt.subplots(1, 1)
+        fig, ax1 = plt.subplots(1, 1, **fig_kw)
     if title:
         ax1.set_title(title)
     x = np.arange(len(pricing))

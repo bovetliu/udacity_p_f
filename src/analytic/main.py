@@ -30,7 +30,7 @@ def practice_knn():
     """
     window_size = 20
     csv_files = ['AAPL_20100104-20171013']
-    aapl_df = utility.get_cols_from_csv_names(csv_files, keep_spy_if_not_having_spy=False)
+    aapl_df = utility.get_cols_from_csv_names(csv_files, keep_spy_if_not_having_spy=False, base_dir="../rawdata")
     # utility.plot_data(aapl_df)
     aapl_series = aapl_df['AAPL']
     aapl_simple_mean = ta_indicators.get_rolling_mean(aapl_series, window_size)
@@ -584,18 +584,16 @@ def practice_slump_prevention():
     rocp_mean = rocp.mean()
     rocp_std = rocp.std()
     rocp_nobs = len(rocp)
-
-    pd_timestamp = pd.Timestamp('2017-11-17 10:15:00')
-    # print(rocp_selected.index)
-    print(rocp_selected.loc[rocp_selected.index < pd_timestamp].tail())
     kwargs = {
         "mean2": rocp_mean,
         "std2": rocp_std,
         "nobs2": rocp_nobs
     }
-    rolling_pvalue = rocp_selected.rolling(window=10, min_periods=1).apply(statistics.pvalue, kwargs=kwargs)
+    pd_timestamp = pd.Timestamp('2017-11-17 10:15:00')
+    # print(rocp_selected.index)
+    print(rocp_selected.loc[rocp_selected.index < pd_timestamp].tail())
 
-    # print(rolling_pvalue)
+    # print(rolling_lin_regress)
     the_df_selected = the_df.loc['2017-11-17']
     col_name_map = {
         'open': 'AMAT_OPEN',
@@ -603,12 +601,24 @@ def practice_slump_prevention():
         'low': 'AMAT_LOW',
         'close': 'AMAT_CLOSE',
     }
+    rolling_max_drop_down = the_df_selected['AMAT_CLOSE'].rolling(window=7, min_periods=1, closed="both")\
+        .apply(statistics.drop_down, kwargs=kwargs)
 
+    closes_of_selected = the_df_selected['AMAT_CLOSE']
+    zhishun_line = ta_indicators.get_zhishun(closes_of_selected, rolling_max_drop_down <= -1.5)
+    print(zhishun_line.head(50))
+    shijie_qizuouyong_zhishun = [zhishun_line.iloc[i] if zhishun_line.iloc[i] > closes_of_selected.iloc[i] else None
+                                 for i in range(len(zhishun_line))]
+    shijie_qizuouyong_zhishun = pd.Series(shijie_qizuouyong_zhishun, zhishun_line.index)
+    print("len(shijie_qizuouyong_zhishun): {}".format(len(shijie_qizuouyong_zhishun)))
+    # for i in range(len(shijie_qizuouyong_zhishun)):
+    #     print("{} {}".format(shijie_qizuouyong_zhishun.index[i], shijie_qizuouyong_zhishun.iloc[i]))
 
-    # visual.plot_candles(the_df_selected, col_name_map, title="AMAT MIN BARS")
-    # plt.show()
-
-    rolling_pvalue.plot()
+    ax = closes_of_selected.plot(figsize=(12, 7), legend=True, ylim=(closes_of_selected.min(), closes_of_selected.max() ))
+    zhishun_line.plot(ax=ax, legend=True)
+    import matplotlib.transforms as mtransforms
+    trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+    ax.fill_between(closes_of_selected.index, 0, 1, where=(closes_of_selected < zhishun_line).values, facecolor='green', alpha=0.5, transform=trans)
     plt.show()
 
 

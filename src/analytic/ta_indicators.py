@@ -221,6 +221,24 @@ def get_bbands(in_ser: pd.Series,
     return upper_band, rolling_mean, lower_band
 
 
+def get_zhishun(in_ser: pd.Series, zhishun:pd.Series, buffer=0.0, name: str=None) -> pd.Series:
+    prev_need_zhishun = zhishun.iloc[0]
+    zhishun_line = [in_ser.iloc[0] if prev_need_zhishun else None]
+    for i in range(1, len(zhishun)):
+        cur_need_zhishun = zhishun.iloc[i]
+        if not cur_need_zhishun:
+            zhishun_line.append(None)
+        else:
+            if prev_need_zhishun:
+                zhishun_line.append(zhishun_line[i - 1])
+            else:
+                zhishun_line.append(in_ser.iloc[i] * (1 - buffer))
+        prev_need_zhishun = cur_need_zhishun
+    zhishun_line = pd.Series(zhishun_line, index=zhishun.index)
+    zhishun_line.name = name if name else in_ser.name + "_ZHISHUN"
+    return zhishun_line
+
+
 # Pivot Points, Supports and Resistances
 def get_ppsr(df):
     PP = pd.Series((df['High'] + df['Low'] + df['Close']) / 3)
