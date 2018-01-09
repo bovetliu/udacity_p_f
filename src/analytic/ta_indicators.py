@@ -221,7 +221,7 @@ def get_bbands(in_ser: pd.Series,
     return upper_band, rolling_mean, lower_band
 
 
-def get_zhishun(in_ser: pd.Series, zhishun:pd.Series, buffer=0.0, name: str=None) -> pd.Series:
+def get_zhishun(in_ser: pd.Series, zhishun: pd.Series, buffer=0.0, name: str=None) -> pd.Series:
     prev_need_zhishun = zhishun.iloc[0]
     zhishun_line = [in_ser.iloc[0] if prev_need_zhishun else None]
     for i in range(1, len(zhishun)):

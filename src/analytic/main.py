@@ -7,9 +7,10 @@ from sklearn import neighbors, preprocessing
 import pandas as pd
 import seaborn as sns
 import pprint
-from analytic import utility, performance, ta_indicators, hmm_strategy, math_formula, statistics, visual
+from analytic import utility, performance, ta_indicators, hmm_strategy, statistics, visual
 
 import math
+import collections
 from matplotlib import cm
 from matplotlib import pyplot as plt
 import statsmodels.api as sm
@@ -390,19 +391,23 @@ def practice_component_decomposing():
 
 
 def practice_np():
-    x = np.asarray([1, 2]).reshape((1, 2))
-    beta = np.zeros(2)
-    print(beta)
-    print(x.dot(beta))
-
-    x = np.array([1, 2]).reshape(1, 2)
-    r = np.array([1, 2, 3, 4]).reshape((2, 2))
-    res = x @r @x.T
-    print(res)
-    res = x.dot(r).dot(x.T)
-    print(res)
-    res = x * r
-    print(res)
+    # x = np.asarray([1, 2]).reshape((1, 2))
+    # beta = np.zeros(2)
+    # print(beta)
+    # print(x.dot(beta))
+    #
+    # x = np.array([1, 2]).reshape(1, 2)
+    # r = np.array([1, 2, 3, 4]).reshape((2, 2))
+    # res = x @r @x.T
+    # print(res)
+    # res = x.dot(r).dot(x.T)
+    # print(res)
+    # res = x * r
+    # print(res)
+    my_deque = collections.deque([], 7)
+    for i in range(0, 10):
+        my_deque.append(i)
+    print(my_deque[-1])
 
 
 def practice_algo_trading_chap2():
@@ -622,9 +627,5 @@ def practice_slump_prevention():
     plt.show()
 
 
-
-
-
-
 if __name__ == "__main__":
-    practice_slump_prevention()
+    practice_np()
