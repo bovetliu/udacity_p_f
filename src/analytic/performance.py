@@ -60,3 +60,50 @@ def get_sharp_ratio(val_ser: pd.Series, risk_free_daily_rtn:float = 0.0):
     drtn.iloc[0] = 0
     mean_rtn = drtn.mean()
     return (mean_rtn - risk_free_daily_rtn) / drtn.std()
+
+
+def backtest(hist_prices, positions, starting_cash: float=30000.0):
+    """
+    Give analysis like total return, return diff between buy and hold, sharp ratio, position change time, win ratio
+    :param hist_prices: if DataFrame, then expecting columns of {STOCK_NAME}_CLOSE, if pd.Series, then assuming closes
+    :param positions: if DataFrame, then expecting {STOCK}_POSITION, if pd.Series, then assuming positions
+    :param starting_cash: float, indicating starting cash
+    :return: do not know yet
+    """
+    # first only consider both parameters are series.
+    if isinstance(hist_prices, pd.Series) and isinstance(positions, pd.Series):
+        symbol_name = hist_prices.name.split("_")[0]
+        print("symbol_name: {}".format(symbol_name))
+        pos_diff = positions.diff()
+        pos_diff.iloc[0] = positions.iloc[0]
+        pos_diff.name = "{}_OPERATION".format(symbol_name)
+        holdings = positions * hist_prices
+        holdings.name = "{}_HOLDING".format(symbol_name)
+        cash = starting_cash - (pos_diff * hist_prices).cumsum(axis=0)
+        cash.name = "CASH"
+        totals = holdings + cash
+        totals.name = "PORTFOLIO_VALUE"
+        rtn = totals.pct_change().fillna(0).add(1).cumprod().add(-1)
+        rtn.name = "PORTFOLIO_RETURN"
+        back_test_result_df = pd.concat([pos_diff, holdings, cash, totals, rtn], axis=1)
+        return BackTestResult(back_test_result_df, len(pos_diff.nonzero()))
+
+    if isinstance(hist_prices, pd.DataFrame) and isinstance(positions, pd.DataFrame):
+        # levelrages = holdings / starting_cash
+        raise Exception("both data frame not supported yet")
+    raise TypeError("hist_prices, positions should either both pd.Series, or both pd.DataFrame")
+
+
+class BackTestResult:
+
+    def __init__(self, back_test_result_df, num_operation=None):
+        self.back_test_result_df = back_test_result_df
+        self.num_operation = num_operation
+
+    def final_return(self):
+        """
+        return final return of back test
+        """
+        return self.back_test_result_df["PORTFOLIO_RETURN"].iloc[-1]
+
+
