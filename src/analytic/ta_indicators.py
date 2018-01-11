@@ -77,6 +77,8 @@ def get_rocp(in_ser: pd.Series, window_size, name: str = None, expanding=True) -
         raise TypeError("in_ser should be pandas Series")
 
     def roc(arr, *argv, **kwargs):
+        if len(arr) <= 1:
+            return 0
         return (arr[-1] - arr[0]) / arr[0]
     tbr = in_ser.rolling(window_size, 1 if expanding else None, closed='both').apply(roc)
     tbr.name = '{}_ROCP_{}'.format(in_ser.name, window_size) if not name else name
@@ -221,20 +223,33 @@ def get_bbands(in_ser: pd.Series,
     return upper_band, rolling_mean, lower_band
 
 
-def get_zhishun(in_ser: pd.Series, zhishun: pd.Series, buffer=0.0, name: str=None) -> pd.Series:
-    prev_need_zhishun = zhishun.iloc[0]
+def get_zhishun(in_ser: pd.Series,
+                should_zhishun: pd.Series,
+                should_stop_zhishun: pd.Series,
+                buffer=0.003,
+                name: str=None) -> pd.Series:
+    use_stop_zhishun = True
+    taishen_zhishun = False
+
+    prev_need_zhishun = should_zhishun.iloc[0]
     zhishun_line = [in_ser.iloc[0] if prev_need_zhishun else None]
-    for i in range(1, len(zhishun)):
-        cur_need_zhishun = zhishun.iloc[i]
+    for i in range(1, len(should_zhishun)):
+        if use_stop_zhishun:
+            cur_need_zhishun = should_zhishun.iloc[i] or (prev_need_zhishun and (not should_stop_zhishun.iloc[i]))
+        else:
+            cur_need_zhishun = should_zhishun.iloc[i]  # or (prev_need_zhishun and (not should_stop_zhishun.iloc[i]))
         if not cur_need_zhishun:
             zhishun_line.append(None)
-        else:
+        else:   # if currently should place zhishun line
             if prev_need_zhishun:
-                zhishun_line.append(zhishun_line[i - 1])
+                if taishen_zhishun:
+                    zhishun_line.append(max(zhishun_line[i - 1],  in_ser.iloc[i] * (1 - 2 * buffer)))
+                else:
+                    zhishun_line.append(zhishun_line[i - 1])
             else:
                 zhishun_line.append(in_ser.iloc[i] * (1 - buffer))
         prev_need_zhishun = cur_need_zhishun
-    zhishun_line = pd.Series(zhishun_line, index=zhishun.index)
+    zhishun_line = pd.Series(zhishun_line, index=should_zhishun.index)
     zhishun_line.name = name if name else in_ser.name + "_ZHISHUN"
     return zhishun_line
 

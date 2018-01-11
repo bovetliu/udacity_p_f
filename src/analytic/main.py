@@ -594,12 +594,13 @@ def practice_slump_prevention():
         "std2": rocp_std,
         "nobs2": rocp_nobs
     }
+    # print(kwargs)
     pd_timestamp = pd.Timestamp('2017-11-17 10:15:00')
     # print(rocp_selected.index)
-    print(rocp_selected.loc[rocp_selected.index < pd_timestamp].tail())
+    # print(rocp_selected.loc[rocp_selected.index < pd_timestamp].tail())
 
     # print(rolling_lin_regress)
-    the_df_selected = the_df.loc['2017-11-17']
+    the_df_selected = the_df.loc['2017-08-18']
     col_name_map = {
         'open': 'AMAT_OPEN',
         'high': 'AMAT_HIGH',
@@ -610,16 +611,26 @@ def practice_slump_prevention():
         .apply(statistics.drop_down, kwargs=kwargs)
 
     closes_of_selected = the_df_selected['AMAT_CLOSE']
-    zhishun_line = ta_indicators.get_zhishun(closes_of_selected, rolling_max_drop_down <= -1.5)
+    ma = ta_indicators.get_rolling_mean(closes_of_selected, window_size=7)
+    ma_rocp = ta_indicators.get_rocp(ma, window_size='60s')
+    print(ma_rocp.head(20))
+    print((ma_rocp >= 0).head(200))
+    zhishun_line = ta_indicators.get_zhishun(
+        closes_of_selected,
+        rolling_max_drop_down <= -1,
+        ma_rocp >= 0,
+        0.003
+    )
     print(zhishun_line.head(50))
-    shijie_qizuouyong_zhishun = [zhishun_line.iloc[i] if zhishun_line.iloc[i] > closes_of_selected.iloc[i] else None
-                                 for i in range(len(zhishun_line))]
-    shijie_qizuouyong_zhishun = pd.Series(shijie_qizuouyong_zhishun, zhishun_line.index)
-    print("len(shijie_qizuouyong_zhishun): {}".format(len(shijie_qizuouyong_zhishun)))
+    shiji_qizuouyong_zhishun = [zhishun_line.iloc[i] if zhishun_line.iloc[i] >= closes_of_selected.iloc[i] else None
+                                for i in range(len(zhishun_line))]
+    shiji_qizuouyong_zhishun = pd.Series(shiji_qizuouyong_zhishun, zhishun_line.index)
+    print("len(shijie_qizuouyong_zhishun): {}".format(len(shiji_qizuouyong_zhishun)))
     # for i in range(len(shijie_qizuouyong_zhishun)):
     #     print("{} {}".format(shijie_qizuouyong_zhishun.index[i], shijie_qizuouyong_zhishun.iloc[i]))
 
-    ax = closes_of_selected.plot(figsize=(12, 7), legend=True, ylim=(closes_of_selected.min(), closes_of_selected.max() ))
+    ax = closes_of_selected.plot(figsize=(12, 7), legend=True, ylim=(closes_of_selected.min(), closes_of_selected.max()))
+    ma.plot(ax=ax, legend=True)
     zhishun_line.plot(ax=ax, legend=True)
     import matplotlib.transforms as mtransforms
     trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
@@ -628,4 +639,4 @@ def practice_slump_prevention():
 
 
 if __name__ == "__main__":
-    practice_np()
+    practice_slump_prevention()
