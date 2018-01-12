@@ -20,7 +20,7 @@ class TestStrategies(unittest.TestCase):
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
-        selected_df = data_frame['2017-06-27']
+        selected_df = data_frame['2017-09-27']
         avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
         avoid_slump_run.start()
         if see_pic:
@@ -33,6 +33,11 @@ class TestStrategies(unittest.TestCase):
             zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, selected_df.index)
             zhishun_line_pdser.name = "zhishun_line"
             zhishun_line_pdser.plot(ax=ax, legend=True)
+
+            dail_loss_control = pd.Series(avoid_slump_run.daily_loss_control_beifen,
+                                          selected_df.index,
+                                          name="daily_loss_control")
+            dail_loss_control.plot(ax=ax, legend=True)
             trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
                             facecolors="red",
@@ -93,10 +98,10 @@ class TestStrategies(unittest.TestCase):
 
         for i in range(len(back_test_res_df)):
 
-            print("{0}  {1:9.6f}  {2:9.6f}  {3:9.6f}"
-                  .format(back_test_res_df.index[i], back_test_res_df[col_names[1]].iloc[i],
-                          back_test_res_df[col_names[2]].iloc[i],
-                          back_test_res_df[col_names[3]].iloc[i]))
+            print("{0}  {1:9.6f}%  {2:9.6f}%  {3:9.6f}%"
+                  .format(back_test_res_df.index[i], back_test_res_df[col_names[1]].iloc[i] * 100,
+                          back_test_res_df[col_names[2]].iloc[i] * 100,
+                          back_test_res_df[col_names[3]].iloc[i] * 100))
 
         print("\nintraday_effect.mean(): {0:9.6f}, intraday_effect.std(): {1:9.6f}".format(
             back_test_res_df[col_names[1]].mean(), back_test_res_df[col_names[1]].std()))

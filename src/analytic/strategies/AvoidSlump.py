@@ -33,14 +33,24 @@ class AvoidSlump(SingleStockStrategy):
         # stop zhishun condition: not prev_need_zhishun and rocp_sma >= self.sma_threshold
         self.sma_threshold = 0.0
 
+        self.__daily_loss_control = []
+        self.daily_loss_control_beifen = []
+
     def before_trading(self):
         """
         """
+        self.__daily_loss_control.clear()
         self.last_prices.clear()
         self.zhishun_line.clear()
 
     def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume):
         self.last_prices.append(pr_close)
+        if len(self.__daily_loss_control) == 0:
+            self.__daily_loss_control.append(pr_close * 0.985)
+        else:
+            self.__daily_loss_control.append(max(self.__daily_loss_control[-1], pr_close * 0.985))
+        # print(self.__daily_loss_control[-1])
+
         len_prices = len(self.last_prices)
 
         left_bd = max(-self.drop_down_window, -len_prices)
@@ -54,6 +64,12 @@ class AvoidSlump(SingleStockStrategy):
         if len(self.zhishun_line) != len_prices:
             raise ValueError("len(self.zhishun_line): {}, while len_prices: {}".format(
                 len(self.zhishun_line), len_prices))
+
+        # if pr_close <= self.__daily_loss_control[-1]:
+        #     self.order_target_percent(0.0)
+        #     return
+        # else:
+        #     self.order_target_percent(1.0)
 
         if newest_zhishun is None:
             self.order_target_percent(1.0)
@@ -69,6 +85,7 @@ class AvoidSlump(SingleStockStrategy):
 
     def just_after_close(self):
         self.zhishun_line_befei = np.append(self.zhishun_line_befei, self.zhishun_line)
+        self.daily_loss_control_beifen = np.append(self.daily_loss_control_beifen, self.__daily_loss_control)
         print("finished day : {}".format(self.current_simu_time.strftime('%Y-%m-%d')))
 
     def calc_zhishun(self, cur_pr, zscored_drop_down, rocp_ma, should_start_zhishun, should_stop_zhishun, buffer=0.003):
