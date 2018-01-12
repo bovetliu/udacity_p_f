@@ -1,23 +1,19 @@
-from datetime import datetime
-
-import numpy as np
-from hmmlearn import hmm
+import collections
+import math
+import pprint
 import warnings
-from sklearn import neighbors, preprocessing
+
+import matplotlib.transforms as mtransforms
+import numpy as np
 import pandas as pd
 import seaborn as sns
-import pprint
-from analytic import utility, performance, ta_indicators, hmm_strategy, statistics, visual
-
-import math
-import collections
-from matplotlib import cm
-from matplotlib import pyplot as plt
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
-from scipy import stats
-import matplotlib.transforms as mtransforms
+from hmmlearn import hmm
+from matplotlib import pyplot as plt
+from sklearn import neighbors
 
+from analytic import utility, performance, ta_indicators, hmm_strategy, statistics
 
 # np.set_printoptions(suppress=True)
 warnings.filterwarnings("ignore", category=DeprecationWarning)

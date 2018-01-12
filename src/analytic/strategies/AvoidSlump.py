@@ -8,8 +8,8 @@ import numpy as np
 class AvoidSlump(SingleStockStrategy):
 
     def __init__(self, symbol_name, hist_data,
-                 begin_datetime,
-                 end_datetime,
+                 begin_datetime=None,
+                 end_datetime=None,
                  starting_cash=5000,
                  rocp_mean=-0.000002602,
                  rocp_std=0.000831548,
@@ -25,7 +25,7 @@ class AvoidSlump(SingleStockStrategy):
         self.drop_down_window = drop_down_window
         self.sma_window = sma_window
 
-        self.last_prices = collections.deque([], 390)
+        self.last_prices = []
         self.zhishun_line = []
         # start zhishun condition : <= self.zscore_threshold
         self.zscore_threshold = -1.0
@@ -51,7 +51,7 @@ class AvoidSlump(SingleStockStrategy):
         prev_ma = None
         if len_prices > 1:
             left_bd = max(-self.sma_window - 1, -len_prices)
-            prev_ma = np.sum(self.last_prices[-left_bd:-1]) / len(self.last_prices[-left_bd:-1])
+            prev_ma = np.sum(self.last_prices[left_bd:-1]) / len(self.last_prices[left_bd:-1])
 
         rocp_ma = 0 if prev_ma is None else (cur_ma - prev_ma) / prev_ma
 
@@ -64,10 +64,15 @@ class AvoidSlump(SingleStockStrategy):
                 len(self.zhishun_line), len_prices))
 
         if newest_zhishun is None:
+            self.order_target_percent(1.0)
             return
+        # at this time, zhishun line is present
+        cur_pos = self.positions.loc[self.current_simu_time]
         if pr_close <= newest_zhishun:
             self.order_target_percent(0.0)
-        elif pr_close > newest_zhishun and rocp_ma >= 0.0:
+        elif cur_pos == 0 and rocp_ma <= 0.0:
+            self.order_target_percent(0.0)
+        else:
             self.order_target_percent(1.0)
 
     def calc_zhishun(self, cur_pr, zscored_drop_down, rocp_ma, should_start_zhishun, should_stop_zhishun, buffer=0.003):

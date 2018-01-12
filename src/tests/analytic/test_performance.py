@@ -1,4 +1,5 @@
 import unittest
+import collections
 
 import pandas as pd
 import numpy as np
@@ -101,3 +102,6 @@ class TestPerformance(unittest.TestCase):
         print("\nselected_df.index.get_loc({}): {}\n".format(begin_time, selected_df.index.get_loc(begin_time)))
         print("test_pandas_timestamp passes")
 
+    def test_numpy(self):
+        my_list = [1, 2, 3, 4]
+        self.assertEqual([3, 4], my_list[-2:])
