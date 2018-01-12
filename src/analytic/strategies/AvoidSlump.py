@@ -11,8 +11,8 @@ class AvoidSlump(SingleStockStrategy):
                  begin_datetime=None,
                  end_datetime=None,
                  starting_cash=5000,
-                 rocp_mean=-0.000002602,
-                 rocp_std=0.000831548,
+                 rocp_mean=-0.000002602,  # pre-calculated from previous 1 year minute date of AMAT
+                 rocp_std=0.000831548,  # pre-calculated from previous 1 year minute date of AMAT
                  drop_down_window=7,
                  sma_window=7):
         super().__init__(symbol_name, hist_data, begin_datetime, end_datetime, starting_cash)
@@ -25,8 +25,9 @@ class AvoidSlump(SingleStockStrategy):
         self.drop_down_window = drop_down_window
         self.sma_window = sma_window
 
-        self.last_prices = []
-        self.zhishun_line = []
+        self.last_prices = []  # to be cleared before trading
+        self.zhishun_line_befei = np.array([], dtype=np.float64)
+        self.zhishun_line = []  # to be cleared before trading
         # start zhishun condition : <= self.zscore_threshold
         self.zscore_threshold = -1.0
         # stop zhishun condition: not prev_need_zhishun and rocp_sma >= self.sma_threshold
@@ -44,16 +45,7 @@ class AvoidSlump(SingleStockStrategy):
 
         left_bd = max(-self.drop_down_window, -len_prices)
         zscored_drop_down = statistics.drop_down(self.last_prices[left_bd:], **self.rocp_params)
-
-        left_bd = max(-self.sma_window, -len_prices)
-        cur_ma = np.sum(self.last_prices[left_bd:]) / min(len_prices, self.sma_window)
-
-        prev_ma = None
-        if len_prices > 1:
-            left_bd = max(-self.sma_window - 1, -len_prices)
-            prev_ma = np.sum(self.last_prices[left_bd:-1]) / len(self.last_prices[left_bd:-1])
-
-        rocp_ma = 0 if prev_ma is None else (cur_ma - prev_ma) / prev_ma
+        rocp_ma = AvoidSlump.calc_rocp_of_sma(self.last_prices, self.sma_window)
 
         # now rocp_ma and zscored_drop_down have been obtained
         newest_zhishun = self.calc_zhishun(pr_close, zscored_drop_down, rocp_ma,
@@ -74,6 +66,10 @@ class AvoidSlump(SingleStockStrategy):
             self.order_target_percent(0.0)
         else:
             self.order_target_percent(1.0)
+
+    def just_after_close(self):
+        self.zhishun_line_befei = np.append(self.zhishun_line_befei, self.zhishun_line)
+        print("finished day : {}".format(self.current_simu_time.strftime('%Y-%m-%d')))
 
     def calc_zhishun(self, cur_pr, zscored_drop_down, rocp_ma, should_start_zhishun, should_stop_zhishun, buffer=0.003):
         if len(self.zhishun_line) == 0:
@@ -98,5 +94,20 @@ class AvoidSlump(SingleStockStrategy):
     def end_zhishun_condition(self, cur_pr, zscored_drop_down, rocp_ma):
         return rocp_ma > self.sma_threshold
 
-    def just_after_close(self):
-        print("nothing to do after close {}".format(self.current_simu_time))
+    @staticmethod
+    def calc_rocp_of_sma(arr, window):
+        """
+        return ROCP of sma having window size specified. Tested at test_strategies.TestStrategies#test_calc_rocp_of_sma
+
+        :param arr: array like, which can be sliced.
+        :param window: an positive integer expected,
+        :return: rate of change percent of window sma
+        """
+        if len(arr) < 2:
+            return 0
+        left_bd = max(-window, -len(arr))
+        ma_of_cur_window = np.sum(arr[left_bd:]) / min(window, len(arr))
+
+        left_bd = max(-window - 1, -len(arr))
+        ma_of_prev_window = np.sum(arr[left_bd:-1]) / len(arr[left_bd:-1])
+        return (ma_of_cur_window - ma_of_prev_window) / ma_of_prev_window

@@ -129,6 +129,7 @@ class SingleStockStrategy(ABC):
             raise ValueError("symbol name must be valid string")
         if not isinstance(hist_data, pd.DataFrame):
             raise TypeError("hist_data must be pd.DataFrame")
+        self.symbol_name = symbol_name
         self.col_dict = {
             "open": "{}_OPEN".format(symbol_name),
             "high": "{}_HIGH".format(symbol_name),
@@ -166,6 +167,7 @@ class SingleStockStrategy(ABC):
             raise ValueError("Currently only support minute level simulation")
 
         self.ib_commission_method = "Fixed"  # another available option is "Tiered"
+        self.back_test_result = None  # expecting one data frame
 
     @abstractmethod
     def before_trading(self):
@@ -191,7 +193,8 @@ class SingleStockStrategy(ABC):
 
     def order_target_value(self, target_holding_value: float):
         cur_price = self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
-        target_pos = int(math.floor(target_holding_value / cur_price))
+        abs_holding_val = abs(target_holding_value)
+        target_pos = int(math.floor(abs_holding_val / cur_price)) * (1 if target_holding_value >= 0.0 else -1)
         self.order_target(target_pos)
 
     def order_target(self, target_position: int):
@@ -210,7 +213,7 @@ class SingleStockStrategy(ABC):
         cur_pos_updated = cur_pos + pos
         self.cashes.loc[self.current_simu_time] = cur_cash_updated
         self.positions.loc[self.current_simu_time] = cur_pos_updated
-        self.totals.loc[self.current_simu_time] = cur_pos_updated * cur_price * cur_cash_updated
+        self.totals.loc[self.current_simu_time] = cur_pos_updated * cur_price + cur_cash_updated
 
     def __calc_commission(self, pos, avg_share_price=0):
         """
@@ -279,3 +282,32 @@ class SingleStockStrategy(ABC):
             self.cashes.loc[self.current_simu_time] = prev_cash
             self.positions.loc[self.current_simu_time] = prev_pos
             self.totals.loc[self.current_simu_time] = prev_pos * cur_price + prev_cash
+
+    def generate_report(self):
+        """
+        generate report
+        :return:
+        """
+        operations = self.positions.diff()
+        operations.iloc[0] = self.positions.iloc[0]
+        operations = operations.apply(lambda pos_change: 0 if pos_change == 0 else 1)
+        operations.name = "{}_OPERATION".format(self.symbol_name)
+        daily_op_grp = operations.groupby(pd.Grouper(level=0, freq='1B'))
+
+        operations_per_day = daily_op_grp.sum()
+        operations_per_day.name = "OPERATION_CNT_PER_DAY"
+
+        dgrp = self.hist_data.groupby(pd.Grouper(level=0, freq='1B'))
+
+        intraday_symbol_rtn = (dgrp[self.col_dict['close']].last() - dgrp[self.col_dict['open']].first()) \
+                    / dgrp[self.col_dict['open']].first()
+        intraday_symbol_rtn.name = "INTRADAY_{}_RTN".format(self.symbol_name)
+        print(intraday_symbol_rtn.head())
+
+        # print(self.totals.head(10))
+        totals_grp = self.totals.groupby(pd.Grouper(level=0, freq='1B'))
+        intraday_rtn = (totals_grp.last() - totals_grp.first()) / totals_grp.first()
+        intraday_rtn.name = "INTRADAY_RTN"
+        print(intraday_rtn.head())
+        self.back_test_result = pd.concat([operations_per_day, intraday_rtn, intraday_symbol_rtn], axis=1)
+        return self.back_test_result
