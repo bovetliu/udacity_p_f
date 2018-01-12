@@ -40,12 +40,10 @@ def linear_regression(sample: np.ndarray, *argv, **kwargs):
     return slope / sample[0] / kwargs['std2']
 
 
-def drop_down(sample: np.ndarray, *argv, **kwargs):
+def drop_down(sample, *argv, **kwargs):
     if 'mean2' not in kwargs:
         raise ValueError('mean2 not supplied in kwargs')
     if 'std2' not in kwargs:
-        raise ValueError('mean2 not supplied in kwargs')
-    if 'nobs2' not in kwargs:
         raise ValueError('mean2 not supplied in kwargs')
     sample_len = len(sample)
     if sample_len < 2:

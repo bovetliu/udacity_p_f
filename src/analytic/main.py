@@ -16,6 +16,8 @@ from matplotlib import pyplot as plt
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
 from scipy import stats
+import matplotlib.transforms as mtransforms
+
 
 # np.set_printoptions(suppress=True)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -632,7 +634,6 @@ def practice_slump_prevention():
     ax = closes_of_selected.plot(figsize=(12, 7), legend=True, ylim=(closes_of_selected.min(), closes_of_selected.max()))
     ma.plot(ax=ax, legend=True)
     zhishun_line.plot(ax=ax, legend=True)
-    import matplotlib.transforms as mtransforms
     trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
     ax.fill_between(closes_of_selected.index, 0, 1, where=(closes_of_selected < zhishun_line).values, facecolor='green', alpha=0.5, transform=trans)
     plt.show()
