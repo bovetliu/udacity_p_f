@@ -85,7 +85,6 @@ def get_rocp(in_ser: pd.Series, window_size, name: str = None, expanding=True) -
     return tbr
 
 
-
 def get_daily_return(in_ser: pd.Series, name: str=None, relative=True) -> pd.Series:
     tbr = in_ser - in_ser.shift(1)
     if relative:

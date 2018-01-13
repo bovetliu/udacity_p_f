@@ -13,6 +13,7 @@ class TestStrategies(unittest.TestCase):
 
     def test_one_day(self):
         see_pic = True
+        see_rtn_compare = True
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
         data_frame = utility.get_cols_from_csv_names(file_names=['AMAT_to_2018-01-05'],
@@ -20,29 +21,35 @@ class TestStrategies(unittest.TestCase):
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
-        selected_df = data_frame['2017-09-27']
+        selected_df = data_frame['2017-11-02']
         avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
         avoid_slump_run.start()
+        closes = selected_df['{}_CLOSE'.format(symbol_name)]
         if see_pic:
-            closes = selected_df['{}_CLOSE'.format(symbol_name)]
             ax = closes.plot(title="avoid slump strategy",
                              legend=True, figsize=(12, 7),
-                             ylim=(closes.min() - 0.5, closes.max() + 0.5))
+                             ylim=(closes.min() - 0.5, closes.max() + 0.5), style="c.-")
             ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
             ma.plot(ax=ax, legend=True)
             zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, selected_df.index)
             zhishun_line_pdser.name = "zhishun_line"
             zhishun_line_pdser.plot(ax=ax, legend=True)
 
-            dail_loss_control = pd.Series(avoid_slump_run.daily_loss_control_beifen,
-                                          selected_df.index,
-                                          name="daily_loss_control")
-            dail_loss_control.plot(ax=ax, legend=True)
             trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
                             facecolors="red",
                             alpha=0.2,
                             transform=trans)
+            plt.show()
+
+        if see_rtn_compare:
+            closes_rtn = ta_indicators.get_rocp(closes, 2).add(1).cumprod()
+            closes_rtn.name = 'closes_rtn'
+            ax = closes_rtn.plot(legend=True, figsize=(12, 7), title="BUY-N-HOLD VS. AVOID SLUMP")
+            totals = avoid_slump_run.totals
+            totals_rtn = ta_indicators.get_rocp(totals, 2).add(1).cumprod()
+            totals_rtn.name = "totals_rtn"
+            totals_rtn.plot(ax=ax, legend=True)
             plt.show()
 
         back_test_res_df = avoid_slump_run.generate_report()

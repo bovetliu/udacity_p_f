@@ -35,6 +35,7 @@ class AvoidSlump(SingleStockStrategy):
 
         self.__daily_loss_control = []
         self.daily_loss_control_beifen = []
+        self.__open_pr = None
 
     def before_trading(self):
         """
@@ -42,8 +43,11 @@ class AvoidSlump(SingleStockStrategy):
         self.__daily_loss_control.clear()
         self.last_prices.clear()
         self.zhishun_line.clear()
+        self.__open_pr = None
 
     def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume):
+        if self.__open_pr is None:
+            self.__open_pr = pr_open
         self.last_prices.append(pr_close)
         if len(self.__daily_loss_control) == 0:
             self.__daily_loss_control.append(pr_close * 0.985)
@@ -65,12 +69,6 @@ class AvoidSlump(SingleStockStrategy):
             raise ValueError("len(self.zhishun_line): {}, while len_prices: {}".format(
                 len(self.zhishun_line), len_prices))
 
-        # if pr_close <= self.__daily_loss_control[-1]:
-        #     self.order_target_percent(0.0)
-        #     return
-        # else:
-        #     self.order_target_percent(1.0)
-
         if newest_zhishun is None:
             self.order_target_percent(1.0)
             return
@@ -78,7 +76,7 @@ class AvoidSlump(SingleStockStrategy):
         cur_pos = self.positions.loc[self.current_simu_time]
         if pr_close <= newest_zhishun:
             self.order_target_percent(0.0)
-        elif cur_pos == 0 and rocp_ma <= 0.0:
+        elif cur_pos == 0:    # if zhishun line presents, and have already touched zhishun line, then do not buy
             self.order_target_percent(0.0)
         else:
             self.order_target_percent(1.0)
