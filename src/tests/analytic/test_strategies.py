@@ -1,17 +1,57 @@
 import unittest
 
+import matplotlib.transforms as mtransforms
+import pandas as pd
+from matplotlib import pyplot as plt
+
 from analytic import utility, ta_indicators
 from analytic.strategies.AvoidSlump import AvoidSlump
-
-import pandas as pd
-
-import matplotlib.transforms as mtransforms
-from matplotlib import pyplot as plt
 
 
 class TestStrategies(unittest.TestCase):
 
-    def test_one_day(self):
+    @staticmethod
+    def trend_pic(avoid_slump_run: AvoidSlump, date):
+
+        closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
+        ax = closes.plot(title="avoid slump strategy {} {}".format(avoid_slump_run.symbol_name, date),
+                         legend=True, figsize=(12, 7),
+                         ylim=(closes.min() - 0.5, max(closes.min() * 1.03, closes.max())), style="c.-")
+        ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
+        ma.plot(ax=ax, legend=True)
+        zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, closes.index)
+        zhishun_line_pdser.name = "zhishun_line"
+        zhishun_line_pdser.plot(ax=ax, legend=True)
+        trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
+                        facecolors="red",
+                        alpha=0.2,
+                        transform=trans)
+        plot_name = "{}_TREND_{}.png".format(avoid_slump_run.symbol_name, date)
+        plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
+        plt.close()
+        # plt.show()
+
+    @staticmethod
+    def rtn_compare_pic(avoid_slump_run: AvoidSlump, date):
+        closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
+        closes_rtn = ta_indicators.get_rocp(closes, 2).add(1).cumprod()
+        closes_rtn.name = 'closes_rtn'
+        totals = avoid_slump_run.totals
+        totals_rtn = ta_indicators.get_rocp(totals, 2).add(1).cumprod()
+        totals_rtn.name = "totals_rtn"
+        ylim = (min(0.97, min(closes_rtn.min(), totals_rtn.min())), max(1.03, closes_rtn.max()))
+        ax = closes_rtn.plot(legend=True, figsize=(12, 7),
+                             title="B-N-H VS. AVOID SLUMP {} {}".format(avoid_slump_run.symbol_name, date),
+                             ylim=ylim)
+        totals_rtn.plot(ax=ax, legend=True)
+
+        plot_name = "{}_RTN_COMPARE_{}.png".format(avoid_slump_run.symbol_name, date)
+        plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
+        plt.close()
+        # plt.show()
+
+    def test_save_figs(self):
         see_pic = True
         see_rtn_compare = True
         symbol_name = "AMAT"
@@ -21,41 +61,25 @@ class TestStrategies(unittest.TestCase):
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
-        selected_df = data_frame['2017-11-02']
-        avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
-        avoid_slump_run.start()
-        closes = selected_df['{}_CLOSE'.format(symbol_name)]
-        if see_pic:
-            ax = closes.plot(title="avoid slump strategy",
-                             legend=True, figsize=(12, 7),
-                             ylim=(closes.min() - 0.5, closes.max() + 0.5), style="c.-")
-            ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
-            ma.plot(ax=ax, legend=True)
-            zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, selected_df.index)
-            zhishun_line_pdser.name = "zhishun_line"
-            zhishun_line_pdser.plot(ax=ax, legend=True)
+        selected_dates = ["2017-06-27", "2017-11-02", "2017-07-07", "2017-07-05", "2017-11-20",
+                          "2017-10-26", "2017-08-11", "2017-10-03", "2017-09-18", "2017-08-08",
+                          "2017-12-18", "2017-09-27", "2017-06-28", "2017-07-03", "2017-07-11",
+                          "2018-01-03", "2017-11-08", "2017-11-27", "2017-12-15", "2017-07-17"]
+        # selected_dates = ["2017-07-03"]
+        for selected_date in selected_dates:
+            selected_df = data_frame[selected_date]
+            avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
+            avoid_slump_run.start()
+            if see_pic:
+                self.trend_pic(avoid_slump_run, selected_date)
 
-            trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
-            ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
-                            facecolors="red",
-                            alpha=0.2,
-                            transform=trans)
-            plt.show()
+            if see_rtn_compare:
+                self.rtn_compare_pic(avoid_slump_run, selected_date)
 
-        if see_rtn_compare:
-            closes_rtn = ta_indicators.get_rocp(closes, 2).add(1).cumprod()
-            closes_rtn.name = 'closes_rtn'
-            ax = closes_rtn.plot(legend=True, figsize=(12, 7), title="BUY-N-HOLD VS. AVOID SLUMP")
-            totals = avoid_slump_run.totals
-            totals_rtn = ta_indicators.get_rocp(totals, 2).add(1).cumprod()
-            totals_rtn.name = "totals_rtn"
-            totals_rtn.plot(ax=ax, legend=True)
-            plt.show()
-
-        back_test_res_df = avoid_slump_run.generate_report()
-        intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
-        back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
-        print(back_test_res_df['intraday_effect'])
+            back_test_res_df = avoid_slump_run.generate_report()
+            intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
+            back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
+            print(back_test_res_df['intraday_effect'])
 
     def test_avoid_slump(self):
         symbol_name = "AMAT"
@@ -78,13 +102,13 @@ class TestStrategies(unittest.TestCase):
         if see_pic:
             closes = selected_df['{}_CLOSE'.format(symbol_name)]
             ax = closes.plot(title="avoid slump strategy",
-                             legend=True, figsize=(12, 7),
+                             legend=True, figsize=(12, 7), style="c.-",
                              ylim=(closes.min() - 0.5, closes.max() + 0.5))
-            ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
-            ma.plot(ax=ax, legend=True)
             zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, selected_df.index)
             zhishun_line_pdser.name = "zhishun_line"
             zhishun_line_pdser.plot(ax=ax, legend=True)
+            ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
+            ma.plot(ax=ax, legend=True)
             trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
                             facecolors="red",
