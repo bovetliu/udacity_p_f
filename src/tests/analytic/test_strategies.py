@@ -51,6 +51,7 @@ class TestStrategies(unittest.TestCase):
         plt.close()
         # plt.show()
 
+    @unittest.skip("just for experimental")
     def test_save_figs(self):
         see_pic = True
         see_rtn_compare = True
@@ -81,6 +82,7 @@ class TestStrategies(unittest.TestCase):
             back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
             print(back_test_res_df['intraday_effect'])
 
+    @unittest.skip("just for experimental")
     def test_avoid_slump(self):
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
@@ -137,8 +139,11 @@ class TestStrategies(unittest.TestCase):
         print("\nintraday_effect.mean(): {0:9.6f}, intraday_effect.std(): {1:9.6f}".format(
             back_test_res_df[col_names[1]].mean(), back_test_res_df[col_names[1]].std()))
 
-
     def test_calc_rocp_of_sma(self):
+        """
+        test calculation of rocp sma whether fitts result of pandas calculation
+        :return:
+        """
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
         data_frame = utility.get_cols_from_csv_names(file_names=['AMAT_to_2018-01-05'],
                                                      interested_col=requested_col,
@@ -155,4 +160,123 @@ class TestStrategies(unittest.TestCase):
             temp_list.append(closes.iloc[i])
             rocp = AvoidSlump.calc_rocp_of_sma(temp_list, window=7)
             self.assertAlmostEqual(rocp_ma_expected.iloc[i], rocp, 6)
+
+    # @unittest.skip("just for experimental")
+    def test_show_intraday_rtn_trend(self):
+        """
+        try to see whether stocks supposed to expose to similar context respond similar in major down time
+        """
+        requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
+        semiconductor_selected = ["MU", "AMAT", "ASML", "KLAC", "LRCX", "INTC", "NVDA", "TXN"]
+        file_names = ["{}_2017-05-26-2018-01-05_1_min".format(symbol) for symbol in semiconductor_selected]
+        data_frame = utility.get_cols_from_csv_names(file_names=file_names,
+                                                     interested_col=requested_col,
+                                                     join_spy_for_data_integrity=False,
+                                                     keep_spy_if_not_having_spy=False,
+                                                     base_dir="../../rawdata")
+
+        def cal_intraday_rtn(open_close_df, *args, **kwargs):
+            """
+
+            :param open_close_df: should be a DataFrame having one day worth of open close minute data
+            :param args: can be ignored
+            :param kwargs: expecting symbol
+            :return: introday rtn
+
+            """
+            if not isinstance(open_close_df, pd.DataFrame) or len(open_close_df) == 0:
+                return None
+            if "symbol" not in kwargs:
+                raise ValueError("kwargs expecting field \"symbol\"")
+            symbol = kwargs["symbol"]
+            daily_open = open_close_df["{}_OPEN".format(symbol)].iloc[0]
+            intraday_rtn = (open_close_df["{}_CLOSE".format(symbol)] - daily_open) / daily_open
+            intraday_rtn.name = "{}_INTRADAY_RTN".format(symbol)
+            return intraday_rtn
+
+        def cal_minute_change(open_close_df, *args, **kwargs):
+            """
+            calculate minute change
+            """
+            if not isinstance(open_close_df, pd.DataFrame) or len(open_close_df) == 0:
+                return None
+            if "symbol" not in kwargs:
+                raise ValueError("\"symbol\" is expected in field")
+            symbol = kwargs["symbol"]
+            minute_changes = ta_indicators.get_rocp(open_close_df["{}_CLOSE".format(symbol)],
+                                                    window_size='60s',
+                                                    name="{}_ROCP_60S".format(symbol),
+                                                    expanding=True)
+            first_close_in_day = open_close_df["{}_CLOSE".format(symbol)].iloc[0]
+            day_open = open_close_df["{}_OPEN".format(symbol)].iloc[0]
+            minute_changes.iloc[0] = (first_close_in_day - day_open) / day_open
+            # print("cal_minute_change, len(minute_changes): {}".format(len(minute_changes)))
+            return minute_changes
+
+        selected_stock = ["MU", "AMAT"]
+
+        # a list of pd.Series
+        stock_intraday_rtns = []
+
+        # a list of pd.Series
+        stock_minute_changes = []
+        stock_min_change_means = {}
+
+        stock_min_change_stds = {}
+
+        for symbol in selected_stock:
+            oc_df = data_frame[["{}_OPEN".format(symbol), "{}_CLOSE".format(symbol)]]
+            oc_df = oc_df['2017-06-05':]
+            # min bars grouped by days
+            grouped_by_days = oc_df.groupby(pd.Grouper(level=0, freq='1B'))
+            kwargs = {"symbol": symbol}
+            # intraday return trend
+            intraday_rtn = grouped_by_days.apply(cal_intraday_rtn, **kwargs).add(1)
+            intraday_rtn.name = "{}_INTRADAY_RTN".format(symbol)
+            intraday_rtn.dropna(inplace=True)
+            print("intraday_rtn.name: {}, len(intraday_rtn): {}, len(data_frame): {}".format(
+                intraday_rtn.name,
+                len(intraday_rtn),
+                len(data_frame)))
+            stock_intraday_rtns.append(intraday_rtn)
+
+            rocp_60s = grouped_by_days.apply(cal_minute_change, **kwargs)
+            rocp_60s.name = "{}_ROCP_60S".format(symbol)
+            rocp_60s.dropna(inplace=True)
+            print("rocp_60s.name: {}, len(rocp_60s): {}, len(data_frame): {}".format(
+                rocp_60s.name,
+                len(rocp_60s),
+                len(data_frame)))
+            stock_minute_changes.append(rocp_60s)
+            stock_min_change_stds[symbol] = rocp_60s.std()
+            stock_min_change_means[symbol] = rocp_60s.mean()
+
+        print("stock_min_change_stds: {}\nstock_min_change_means:{} ".format(stock_min_change_stds, stock_min_change_means))
+
+        #  plotting
+        # dates = pd.date_range('2017-05-26', '2017-06-01', freq="B")
+        # for i in range(len(dates)):
+        #     selected_date = dates[i].strftime("%Y-%m-%d")
+        #     ylim = [1 - 0.02, 1 + 0.02]
+        #     ax = None
+        #     try:
+        #         for i in range(len(stock_intraday_rtns)):
+        #             rtns = stock_intraday_rtns[i].loc[selected_date]
+        #             ylim[0] = min(ylim[0], rtns.min())
+        #             ylim[1] = max(ylim[1], rtns.max())
+        #             if ax is None:
+        #                 ax = rtns.plot(title="INTRADAY_RTN COMPARE {}".format(selected_date),
+        #                                legend=True, figsize=(12, 9), style=".-", alpha=0.3)
+        #             else:
+        #                 rtns.plot(ax=ax, style=".-", legend=True, alpha=0.3)
+        #         plt.ylim(ymin=ylim[0], ymax=ylim[1])
+        #         plt.xlabel("datetime")
+        #         ax.set_alpha(0.2)
+        #         plt.xticks(rotation=90)
+        #         plt.show()
+        #     except TypeError as te:
+        #         if "no numeric data to plot" in str(te):
+        #             continue
+        #         else:
+        #             raise te
 

@@ -128,7 +128,6 @@ def rescale(in_ser: pd.Series, shift_so_zero_mean: bool=False, name: str=None):
 def get_appropriate_file(symbol):
     map = {
         "AMD": "AMD_20151224-20171222",
-        "AMAT": "AMAT_to_2018-01-05",
         "AAPL": "AAPL_20121114_20171114",
         "EWA": "EWA_20060103_20171228",
         "EWC": "EWC_20060103_20171228",
@@ -138,5 +137,10 @@ def get_appropriate_file(symbol):
         "IBM": "IBM_20100104-20171013",
         "UVXY": "UVXY_20111223-20171222"
     }
-    return map[symbol]
 
+    semiconductor_selected = ["MU", "TSM", "AMAT", "ASML",
+                              "KLAC", "LRCX", "INTC", "NVDA",
+                              "TXN"]
+    for symbol in semiconductor_selected:
+        map[symbol] = "{}_2017-05-26-2018-01-05_1_min".format(symbol)
+    return map[symbol]
