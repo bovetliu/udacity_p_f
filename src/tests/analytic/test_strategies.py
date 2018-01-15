@@ -5,6 +5,7 @@ import unittest
 import matplotlib.transforms as mtransforms
 import pandas as pd
 from matplotlib import pyplot as plt
+import numpy as np
 
 from analytic import utility, ta_indicators, statistics
 from analytic.strategies.AvoidSlump import AvoidSlump
@@ -280,10 +281,11 @@ class TestStrategies(unittest.TestCase):
                 axes[0, 0].legend(legends1)
 
                 # prepare second subplot
-                axes[1, 0].set_ylim(bottom=-12, top=0.5)
-                axes[1, 0].set_title("MINIMUM Z SCORE COMPARE {}".format(selected_date))
+                axes[1, 0].set_ylim(bottom=-10, top=10)
+                axes[1, 0].set_yticks(np.arange(-10, 11, 1))
+                axes[1, 0].set_title("SUM Z SCORE COMPARE {}".format(selected_date))
                 legends2 = []
-                min_z_in_7mins = []
+                sum_z_in_7mins = []
                 for symbol, rocp_60 in stock_rocp60.items():
                     rocp60_of_selected = rocp_60.loc[selected_date]
                     kwargs = {
@@ -292,12 +294,14 @@ class TestStrategies(unittest.TestCase):
                     }
                     min_z_in_7min = rocp60_of_selected.rolling(window=7, min_periods=1) \
                         .apply(statistics.min_z_score, kwargs=kwargs)
-                    min_z_in_7min.name = "{}_MINI_Z_IN_7_MIN".format(symbol)
-                    min_z_in_7mins.append(min_z_in_7min)
-
-                    legends2.append(min_z_in_7min.name)
-                    axes[1, 0].plot(min_z_in_7min.index.values, min_z_in_7min.values, alpha=0.13)
-                mean_z = pd.concat(min_z_in_7mins, axis=1).mean(axis=1)
+                    max_z_in_7min = rocp60_of_selected.rolling(window=7, min_periods=1) \
+                        .apply(statistics.max_z_score, kwargs=kwargs)
+                    sum_z = min_z_in_7min.add(max_z_in_7min)
+                    sum_z_in_7mins.append(sum_z)
+                    sum_z.name = "{}_SUM_Z_7MIN".format(symbol)
+                    legends2.append(sum_z.name)
+                    axes[1, 0].plot(sum_z.index.values, sum_z.values, alpha=0.16)
+                mean_z = pd.concat(sum_z_in_7mins, axis=1).mean(axis=1)
                 mean_z.name = "MEDIAN_Z_IN_7_MIN"
                 axes[1, 0].plot(mean_z.index.values, mean_z.values)
                 legends2.append(mean_z.name)
