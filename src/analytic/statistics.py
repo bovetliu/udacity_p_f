@@ -1,3 +1,5 @@
+import collections
+
 from scipy import stats
 import numpy as np
 
@@ -38,6 +40,58 @@ def linear_regression(sample: np.ndarray, *argv, **kwargs):
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
     # print("slope: {}, slope / std2: {}".format(slope, slope / kwargs['std2']))
     return slope / sample[0] / kwargs['std2']
+
+
+counter_min = collections.Counter()
+counter_max = collections.Counter()
+
+
+def max_z_score(sample, *argv, **kwargs):
+    if 'mean2' not in kwargs:
+        raise ValueError('mean2 not supplied in kwargs')
+    if 'std2' not in kwargs:
+        raise ValueError('mean2 not supplied in kwargs')
+    len_sample = len(sample)
+    if len_sample < 1:
+        return 0
+    the_sum = 0
+    res = -100
+    i_2 = 0
+    for i in range(len(sample)):
+        the_sum += sample[len_sample - 1 - i]
+        avg = the_sum / (i + 1)
+        temp_z = (avg - kwargs['mean2']) / (kwargs['std2'] / np.math.sqrt(i + 1))
+        if temp_z > res:
+            res = temp_z
+            i_2 = i
+    counter_min[i_2] += 1
+    return res
+
+
+def min_z_score(sample, *argv, **kwargs):
+    """
+    calculate smallest zscore
+    """
+    if 'mean2' not in kwargs:
+        raise ValueError('mean2 not supplied in kwargs')
+    if 'std2' not in kwargs:
+        raise ValueError('mean2 not supplied in kwargs')
+    len_sample = len(sample)
+    if len_sample < 1:
+        return 0
+
+    the_sum = 0
+    res = 100
+    i_2 = 0
+    for i in range(len(sample)):
+        the_sum += sample[len_sample - 1 - i]
+        avg = the_sum / (i + 1)
+        temp_z = (avg - kwargs['mean2']) / (kwargs['std2'] / np.math.sqrt(i + 1))
+        if temp_z < res:
+            res = temp_z
+            i_2 = i
+    counter_min[i_2] += 1
+    return res
 
 
 def drop_down(sample, *argv, **kwargs):

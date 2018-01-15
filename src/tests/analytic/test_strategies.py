@@ -215,17 +215,17 @@ class TestStrategies(unittest.TestCase):
             # print("cal_minute_change, len(minute_changes): {}".format(len(minute_changes)))
             return minute_changes
 
-        selected_stock = ["MU", "AMAT"]
+        selected_stock = ["AMAT", "ASML", "KLAC", "LRCX"]
 
         # a map mapping symbol name to pd.Series
-        stock_intraday_rtns = collections.OrderedDict([])
+        stock_intraday_rtns = collections.OrderedDict({})
 
         # a map mapping symbol name to pd.Series
-        stock_rocp60 = collections.OrderedDict([])
+        stock_rocp60 = collections.OrderedDict({})
 
         # a map mapping symbol to scalar values
-        stock_min_change_means = collections.OrderedDict([])
-        stock_min_change_stds = collections.OrderedDict([])
+        stock_min_change_means = collections.OrderedDict({})
+        stock_min_change_stds = collections.OrderedDict({})
 
         for symbol in selected_stock:
             oc_df = data_frame[["{}_OPEN".format(symbol), "{}_CLOSE".format(symbol)]]
@@ -241,7 +241,7 @@ class TestStrategies(unittest.TestCase):
                 len(intraday_rtn),
                 len(data_frame)))
             print("put stock_intraday_rtns[{}]".format(symbol))
-            stock_intraday_rtns[symbol] = intraday_rtn
+            stock_intraday_rtns[symbol] = pd.Series(intraday_rtn.values, index=data_frame.index, name=intraday_rtn.name)
             rocp_60s = grouped_by_days.apply(cal_minute_change, **kwargs)
             rocp_60s.name = "{}_ROCP_60S".format(symbol)
             rocp_60s.dropna(inplace=True)
@@ -249,61 +249,67 @@ class TestStrategies(unittest.TestCase):
                 rocp_60s.name,
                 len(rocp_60s),
                 len(data_frame)))
-            stock_rocp60[symbol] = rocp_60s
+            stock_rocp60[symbol] = pd.Series(rocp_60s.values, index=data_frame.index, name=rocp_60s.name)
             stock_min_change_stds[symbol] = rocp_60s.std()
             stock_min_change_means[symbol] = rocp_60s.mean()
 
         print("stock_min_change_stds: {}\nstock_min_change_means:{} ".format(stock_min_change_stds, stock_min_change_means))
 
         #  plotting
-        dates = pd.date_range('2017-05-26', '2017-06-01', freq="B")
+        dates = pd.date_range('2017-05-26', '2018-01-05', freq="B")
         for i in range(len(dates)):
             selected_date = dates[i].strftime("%Y-%m-%d")
             print("going to generate pic for %s" % selected_date)
-            ylim = [1 - 0.02, 1 + 0.02]
-            ax = None
-            # TODO(Bowei) combine two pictures
             try:
+                if len(stock_intraday_rtns['AMAT'].loc[selected_date]) == 0:
+                    continue
+                fig, axes = plt.subplots(nrows=2, ncols=1, squeeze=False, sharex="col")
+                fig.set_figwidth(16)
+                fig.set_figheight(18)
+                ylim = [1 - 0.02, 1 + 0.02]
+                axes[0, 0].set_xlabel("time")
+                axes[0, 0].set_title("INTRADAY_RTN COMPARE {}".format(selected_date))
+                legends1 = []
                 for symbol, rocp_60 in stock_intraday_rtns.items():
                     rtns = stock_intraday_rtns[symbol].loc[selected_date]
                     ylim[0] = min(ylim[0], rtns.min())
                     ylim[1] = max(ylim[1], rtns.max())
-                    if ax is None:
-                        ax = rtns.plot(title="INTRADAY_RTN COMPARE {}".format(selected_date),
-                                       legend=True, figsize=(12, 9), style=".-", alpha=0.3)
-                    else:
-                        rtns.plot(ax=ax, style=".-", legend=True, alpha=0.3)
-                plt.ylim(ymin=ylim[0], ymax=ylim[1])
-                plt.xlabel("datetime")
-                plt.xticks(rotation=90)
-                plot_name = "intraday_compare_{}".format(selected_date)
-                plt.savefig("../../pictures/{}.png".format(plot_name))
-                plt.close()
+                    legends1.append(rtns.name)
+                    axes[0, 0].plot(rtns.index.values, rtns.values, '.-', alpha=0.5)
+                axes[0, 0].set_ylim(bottom=ylim[0], top=ylim[1])
+                axes[0, 0].legend(legends1)
 
-                ax = None
-                ylim = (-12, 0.5)
+                # prepare second subplot
+                axes[1, 0].set_ylim(bottom=-12, top=0.5)
+                axes[1, 0].set_title("MINIMUM Z SCORE COMPARE {}".format(selected_date))
+                legends2 = []
+                min_z_in_7mins = []
                 for symbol, rocp_60 in stock_rocp60.items():
-                    closes_of_selected = data_frame["{}_CLOSE".format(symbol)].loc[selected_date]
+                    rocp60_of_selected = rocp_60.loc[selected_date]
                     kwargs = {
                         "mean2": stock_min_change_means[symbol],
                         "std2": stock_min_change_stds[symbol]
                     }
-                    drop_downs = closes_of_selected.rolling(window=7, min_periods=1) \
-                        .apply(statistics.drop_down, kwargs=kwargs)
-                    drop_downs.name = "{}_DROP_DOWN_Z_SCORE".format(symbol)
-                    if ax is None:
-                        ax = drop_downs.plot(title="DROP DOWN COMPARE {}".format(selected_date),
-                                             legend=True,
-                                             figsize=(12, 9),
-                                             alpha=0.3, ylim=ylim)
-                    else:
-                        drop_downs.plot(ax=ax, legend=True, alpha=0.3)
-                ax.set_xlabel("time")
-                plot_name = "drop_down_compare_{}".format(selected_date)
+                    min_z_in_7min = rocp60_of_selected.rolling(window=7, min_periods=1) \
+                        .apply(statistics.min_z_score, kwargs=kwargs)
+                    min_z_in_7min.name = "{}_MINI_Z_IN_7_MIN".format(symbol)
+                    min_z_in_7mins.append(min_z_in_7min)
+
+                    legends2.append(min_z_in_7min.name)
+                    axes[1, 0].plot(min_z_in_7min.index.values, min_z_in_7min.values, alpha=0.13)
+                mean_z = pd.concat(min_z_in_7mins, axis=1).mean(axis=1)
+                mean_z.name = "MEDIAN_Z_IN_7_MIN"
+                axes[1, 0].plot(mean_z.index.values, mean_z.values)
+                legends2.append(mean_z.name)
+                axes[1, 0].legend(legends2)
+                plt.xticks(rotation=90)
+                plot_name = "two_in_one_{}".format(selected_date)
                 plt.savefig("../../pictures/{}.png".format(plot_name))
                 plt.close()
             except TypeError as te:
                 if "no numeric data to plot" in str(te):
+                    plt.close()
                     continue
                 else:
                     raise te
+        print(statistics.counter_min)
