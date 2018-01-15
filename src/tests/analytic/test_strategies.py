@@ -1,10 +1,12 @@
+import collections
 import unittest
+
 
 import matplotlib.transforms as mtransforms
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from analytic import utility, ta_indicators
+from analytic import utility, ta_indicators, statistics
 from analytic.strategies.AvoidSlump import AvoidSlump
 
 
@@ -215,18 +217,18 @@ class TestStrategies(unittest.TestCase):
 
         selected_stock = ["MU", "AMAT"]
 
-        # a list of pd.Series
-        stock_intraday_rtns = []
+        # a map mapping symbol name to pd.Series
+        stock_intraday_rtns = collections.OrderedDict([])
 
-        # a list of pd.Series
-        stock_minute_changes = []
-        stock_min_change_means = {}
+        # a map mapping symbol name to pd.Series
+        stock_rocp60 = collections.OrderedDict([])
 
-        stock_min_change_stds = {}
+        # a map mapping symbol to scalar values
+        stock_min_change_means = collections.OrderedDict([])
+        stock_min_change_stds = collections.OrderedDict([])
 
         for symbol in selected_stock:
             oc_df = data_frame[["{}_OPEN".format(symbol), "{}_CLOSE".format(symbol)]]
-            oc_df = oc_df['2017-06-05':]
             # min bars grouped by days
             grouped_by_days = oc_df.groupby(pd.Grouper(level=0, freq='1B'))
             kwargs = {"symbol": symbol}
@@ -238,8 +240,8 @@ class TestStrategies(unittest.TestCase):
                 intraday_rtn.name,
                 len(intraday_rtn),
                 len(data_frame)))
-            stock_intraday_rtns.append(intraday_rtn)
-
+            print("put stock_intraday_rtns[{}]".format(symbol))
+            stock_intraday_rtns[symbol] = intraday_rtn
             rocp_60s = grouped_by_days.apply(cal_minute_change, **kwargs)
             rocp_60s.name = "{}_ROCP_60S".format(symbol)
             rocp_60s.dropna(inplace=True)
@@ -247,36 +249,61 @@ class TestStrategies(unittest.TestCase):
                 rocp_60s.name,
                 len(rocp_60s),
                 len(data_frame)))
-            stock_minute_changes.append(rocp_60s)
+            stock_rocp60[symbol] = rocp_60s
             stock_min_change_stds[symbol] = rocp_60s.std()
             stock_min_change_means[symbol] = rocp_60s.mean()
 
         print("stock_min_change_stds: {}\nstock_min_change_means:{} ".format(stock_min_change_stds, stock_min_change_means))
 
         #  plotting
-        # dates = pd.date_range('2017-05-26', '2017-06-01', freq="B")
-        # for i in range(len(dates)):
-        #     selected_date = dates[i].strftime("%Y-%m-%d")
-        #     ylim = [1 - 0.02, 1 + 0.02]
-        #     ax = None
-        #     try:
-        #         for i in range(len(stock_intraday_rtns)):
-        #             rtns = stock_intraday_rtns[i].loc[selected_date]
-        #             ylim[0] = min(ylim[0], rtns.min())
-        #             ylim[1] = max(ylim[1], rtns.max())
-        #             if ax is None:
-        #                 ax = rtns.plot(title="INTRADAY_RTN COMPARE {}".format(selected_date),
-        #                                legend=True, figsize=(12, 9), style=".-", alpha=0.3)
-        #             else:
-        #                 rtns.plot(ax=ax, style=".-", legend=True, alpha=0.3)
-        #         plt.ylim(ymin=ylim[0], ymax=ylim[1])
-        #         plt.xlabel("datetime")
-        #         ax.set_alpha(0.2)
-        #         plt.xticks(rotation=90)
-        #         plt.show()
-        #     except TypeError as te:
-        #         if "no numeric data to plot" in str(te):
-        #             continue
-        #         else:
-        #             raise te
+        dates = pd.date_range('2017-05-26', '2017-06-01', freq="B")
+        for i in range(len(dates)):
+            selected_date = dates[i].strftime("%Y-%m-%d")
+            print("going to generate pic for %s" % selected_date)
+            ylim = [1 - 0.02, 1 + 0.02]
+            ax = None
+            # TODO(Bowei) combine two pictures
+            try:
+                for symbol, rocp_60 in stock_intraday_rtns.items():
+                    rtns = stock_intraday_rtns[symbol].loc[selected_date]
+                    ylim[0] = min(ylim[0], rtns.min())
+                    ylim[1] = max(ylim[1], rtns.max())
+                    if ax is None:
+                        ax = rtns.plot(title="INTRADAY_RTN COMPARE {}".format(selected_date),
+                                       legend=True, figsize=(12, 9), style=".-", alpha=0.3)
+                    else:
+                        rtns.plot(ax=ax, style=".-", legend=True, alpha=0.3)
+                plt.ylim(ymin=ylim[0], ymax=ylim[1])
+                plt.xlabel("datetime")
+                plt.xticks(rotation=90)
+                plot_name = "intraday_compare_{}".format(selected_date)
+                plt.savefig("../../pictures/{}.png".format(plot_name))
+                plt.close()
 
+                ax = None
+                ylim = (-12, 0.5)
+                for symbol, rocp_60 in stock_rocp60.items():
+                    closes_of_selected = data_frame["{}_CLOSE".format(symbol)].loc[selected_date]
+                    kwargs = {
+                        "mean2": stock_min_change_means[symbol],
+                        "std2": stock_min_change_stds[symbol]
+                    }
+                    drop_downs = closes_of_selected.rolling(window=7, min_periods=1) \
+                        .apply(statistics.drop_down, kwargs=kwargs)
+                    drop_downs.name = "{}_DROP_DOWN_Z_SCORE".format(symbol)
+                    if ax is None:
+                        ax = drop_downs.plot(title="DROP DOWN COMPARE {}".format(selected_date),
+                                             legend=True,
+                                             figsize=(12, 9),
+                                             alpha=0.3, ylim=ylim)
+                    else:
+                        drop_downs.plot(ax=ax, legend=True, alpha=0.3)
+                ax.set_xlabel("time")
+                plot_name = "drop_down_compare_{}".format(selected_date)
+                plt.savefig("../../pictures/{}.png".format(plot_name))
+                plt.close()
+            except TypeError as te:
+                if "no numeric data to plot" in str(te):
+                    continue
+                else:
+                    raise te

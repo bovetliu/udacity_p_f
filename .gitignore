@@ -1,5 +1,5 @@
 /src/rawdata
+/src/pictures
 /.idea
 *.pyc
-/src/rawdata
 */__pycache__/
