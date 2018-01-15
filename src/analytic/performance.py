@@ -174,7 +174,7 @@ class SingleStockStrategy(ABC):
         pass
 
     @abstractmethod
-    def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume):
+    def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume, **kwargs):
         pass
 
     @abstractmethod
@@ -184,26 +184,32 @@ class SingleStockStrategy(ABC):
     def start(self):
         self.__iterate_bars()
 
-    def order_target_percent(self, target_percent: float):
-        cur_price = self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
+    def order_target_percent(self, target_percent: float, overriding_price: float=None):
+        cur_price = overriding_price if (overriding_price is not None) \
+            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
+        if cur_price is None:
+            raise ValueError("cur_price is None")
         cur_pos = self.positions.loc[self.current_simu_time]
         cur_cash = self.cashes.loc[self.current_simu_time]
         cur_total = cur_price * cur_pos + cur_cash
-        self.order_target_value(cur_total * target_percent)
+        self.order_target_value(cur_total * target_percent, cur_price)
 
-    def order_target_value(self, target_holding_value: float):
-        cur_price = self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
+    def order_target_value(self, target_holding_value: float, overriding_price: float=None):
+        cur_price = overriding_price if (overriding_price is not None) \
+            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
         abs_holding_val = abs(target_holding_value)
         target_pos = int(math.floor(abs_holding_val / cur_price)) * (1 if target_holding_value >= 0.0 else -1)
-        self.order_target(target_pos)
+        self.order_target(target_pos, cur_price)
 
-    def order_target(self, target_position: int):
+    def order_target(self, target_position: int, overriding_price: float=None):
+        cur_price = overriding_price if (overriding_price is not None) \
+            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
         cur_pos = self.positions.loc[self.current_simu_time]
-        self.order(target_position - cur_pos)
+        self.order(target_position - cur_pos, cur_price)
 
-    def order(self, pos: int):
-        cur_price = self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
-
+    def order(self, pos: int, overriding_price: float):
+        cur_price = overriding_price if (overriding_price is not None) \
+            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
         cur_cash = self.cashes.loc[self.current_simu_time]
         cur_pos = self.positions.loc[self.current_simu_time]
 
@@ -257,12 +263,16 @@ class SingleStockStrategy(ABC):
 
             self.current_simu_time = time
             self.__update()
+
+            row_ser = self.hist_data.loc[time]
+            row_dict = row_ser.to_dict()
             self.handle_data(
-                self.hist_data[self.col_dict['open']].loc[time],
-                self.hist_data[self.col_dict['high']].loc[time],
-                self.hist_data[self.col_dict['low']].loc[time],
-                self.hist_data[self.col_dict['close']].loc[time],
-                self.hist_data[self.col_dict['volume']].loc[time])
+                row_dict[self.col_dict['open']],
+                row_dict[self.col_dict['high']],
+                row_dict[self.col_dict['low']],
+                row_dict[self.col_dict['close']],
+                row_dict[self.col_dict['volume']],
+                **row_dict)
 
             if one_period_after not in self.hist_data.index:
                 self.current_simu_time = time + pd.Timedelta("1 minute")

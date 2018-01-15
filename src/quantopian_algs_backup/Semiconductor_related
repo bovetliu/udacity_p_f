@@ -2,3 +2,16 @@ Semiconductor Memory: MU
 Semiconductor - Circuit: TSM
 Semiconductor Equipment - Wafer Fabrication: AMAT, ASML, KLAC, LRCX
 Semiconductor - General: INTC, NVDA, TXN
+
+
+stock_min_change_stds: OrderedDict([
+('AMAT', 0.00084797841463923234),
+('ASML', 0.00047730026395329206),
+('KLAC', 0.000832496054091706),
+('LRCX', 0.00089741792783212338)])
+
+stock_min_change_means:OrderedDict([
+('AMAT', -1.2456320934141318e-06),
+('ASML', 2.046239009585024e-06),
+('KLAC', -2.2361834643659183e-06),
+('LRCX', -1.486758815503749e-06)])

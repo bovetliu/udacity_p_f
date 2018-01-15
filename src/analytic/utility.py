@@ -141,6 +141,6 @@ def get_appropriate_file(symbol):
     semiconductor_selected = ["MU", "TSM", "AMAT", "ASML",
                               "KLAC", "LRCX", "INTC", "NVDA",
                               "TXN"]
-    for symbol in semiconductor_selected:
-        map[symbol] = "{}_2017-05-26-2018-01-05_1_min".format(symbol)
+    for symbol_2 in semiconductor_selected:
+        map[symbol_2] = "{}_2017-05-26-2018-01-05_1_min".format(symbol_2)
     return map[symbol]

@@ -54,10 +54,22 @@ class TestStrategies(unittest.TestCase):
         plt.close()
         # plt.show()
 
+    @staticmethod
+    def provide_avoid_slump(symbol_name, historical_data):
+        """
+        provide avoid slump with same parameters
+        """
+        return AvoidSlump(symbol_name, hist_data=historical_data,
+                          starting_cash=15000,
+                          rocp_mean=-1.2456320934141318e-06,
+                          rocp_std=0.00084797841463923234,
+                          zscore_threshold=0,
+                          sma_threshold=0)
+
     @unittest.skip("just for experimental")
     def test_save_figs(self):
-        see_pic = True
-        see_rtn_compare = True
+        save_pic = True
+        save_rtn_compare = True
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
         data_frame = utility.get_cols_from_csv_names(file_names=['AMAT_to_2018-01-05'],
@@ -72,12 +84,12 @@ class TestStrategies(unittest.TestCase):
         # selected_dates = ["2017-07-03"]
         for selected_date in selected_dates:
             selected_df = data_frame[selected_date]
-            avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
+            avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df)
             avoid_slump_run.start()
-            if see_pic:
+            if save_pic:
                 self.trend_pic(avoid_slump_run, selected_date)
 
-            if see_rtn_compare:
+            if save_rtn_compare:
                 self.rtn_compare_pic(avoid_slump_run, selected_date)
 
             back_test_res_df = avoid_slump_run.generate_report()
@@ -85,46 +97,31 @@ class TestStrategies(unittest.TestCase):
             back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
             print(back_test_res_df['intraday_effect'])
 
-    @unittest.skip("just for experimental")
+    # @unittest.skip("just for experimental")
     def test_avoid_slump(self):
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
-        data_frame = utility.get_cols_from_csv_names(file_names=['AMAT_to_2018-01-05'],
+        data_frame = utility.get_cols_from_csv_names(file_names=[utility.get_appropriate_file(symbol_name)],
                                                      interested_col=requested_col,
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
 
-        do_actual_comparison = False
-        see_pic = False
+        mean_z_7min = pd.Series.from_csv(path="../../rawdata/{}.csv".format("MEAN_Z_IN_7_MIN"),
+                           header=0,
+                           index_col=0,
+                           infer_datetime_format=True)
+        mean_z_7min.name = "MEAN_Z_IN_7_MIN"
+        data_frame = data_frame.assign(MEAN_Z_IN_7_MIN=mean_z_7min)
 
-        # selected_df = data_frame.loc['2017-08-18': '2017-08-31']
+        # selected_df = data_frame.loc['2017-08-18': '2017-08-19']
         selected_df = data_frame
-        avoid_slump_run = AvoidSlump(symbol_name, selected_df, starting_cash=15000)
+        avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df)
         avoid_slump_run.start()
         # print(avoid_slump_run.positions.head(100))
 
-        if see_pic:
-            closes = selected_df['{}_CLOSE'.format(symbol_name)]
-            ax = closes.plot(title="avoid slump strategy",
-                             legend=True, figsize=(12, 7), style="c.-",
-                             ylim=(closes.min() - 0.5, closes.max() + 0.5))
-            zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, selected_df.index)
-            zhishun_line_pdser.name = "zhishun_line"
-            zhishun_line_pdser.plot(ax=ax, legend=True)
-            ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
-            ma.plot(ax=ax, legend=True)
-            trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
-            ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
-                            facecolors="red",
-                            alpha=0.2,
-                            transform=trans)
-            plt.show()
         back_test_res_df = avoid_slump_run.generate_report()
 
-        if do_actual_comparison:
-            self.assertAlmostEqual(back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)].iloc[0], -0.010498, 6)
-            self.assertAlmostEqual(back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)].iloc[1], -0.018808, 6)
         intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
         back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
         #  did back come fist
