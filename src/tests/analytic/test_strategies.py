@@ -258,6 +258,10 @@ class TestStrategies(unittest.TestCase):
 
         #  plotting
         dates = pd.date_range('2017-05-26', '2018-01-05', freq="B")
+        # prepare csv headers of file
+        meanz_csv = open("../../rawdata/{}.csv".format("MEAN_Z_IN_7_MIN"), "w")
+        meanz_csv.write("time, MEAN_Z_IN_7_MIN\n")
+        meanz_csv.close()
         for i in range(len(dates)):
             selected_date = dates[i].strftime("%Y-%m-%d")
             print("going to generate pic for %s" % selected_date)
@@ -302,10 +306,13 @@ class TestStrategies(unittest.TestCase):
                     legends2.append(sum_z.name)
                     axes[1, 0].plot(sum_z.index.values, sum_z.values, alpha=0.16)
                 mean_z = pd.concat(sum_z_in_7mins, axis=1).mean(axis=1)
-                mean_z.name = "MEDIAN_Z_IN_7_MIN"
+                mean_z.name = "MEAN_Z_IN_7_MIN"
+                mean_z.to_csv("../../rawdata/{}.csv".format(mean_z.name), mode='a')
                 axes[1, 0].plot(mean_z.index.values, mean_z.values)
                 legends2.append(mean_z.name)
                 axes[1, 0].legend(legends2)
+                # add zero line
+                axes[1, 0].plot(mean_z.index.values, np.zeros((len(mean_z))))
                 plt.xticks(rotation=90)
                 plot_name = "two_in_one_{}".format(selected_date)
                 plt.savefig("../../pictures/{}.png".format(plot_name))
