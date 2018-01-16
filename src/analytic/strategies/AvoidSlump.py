@@ -1,5 +1,5 @@
 from analytic.performance import SingleStockStrategy
-from analytic import statistics
+from analytic import statistics, utility, ta_indicators
 
 import numpy as np
 
@@ -40,6 +40,16 @@ class AvoidSlump(SingleStockStrategy):
         self.__daily_loss_control = []
         self.daily_loss_control_beifen = []
         self.__open_pr = None
+        self.__uvxy_daily_open = None
+        self.__vix_daily_open = None
+
+        self.vix_daily = utility.get_cols_from_csv_names(file_names=[utility.get_appropriate_file("VIX")],
+                                                         interested_col=['time', 'high', 'low', 'open', 'close', 'volume'],
+                                                         join_spy_for_data_integrity=False,
+                                                         keep_spy_if_not_having_spy=False,
+                                                         base_dir="../../rawdata")
+        self.vix_daily = self.vix_daily.assign(VIX_OPEN_SMA100=ta_indicators.get_rolling_mean(self.vix_daily["VIX_OPEN"], window_size=100))
+        print(self.vix_daily.head())
 
     def before_trading(self):
         """
@@ -49,9 +59,21 @@ class AvoidSlump(SingleStockStrategy):
         self.last_prices.clear()
         self.zhishun_line.clear()
         self.__open_pr = None
+        self.__uvxy_daily_open = None
+        self.__vix_daily_open = None
 
     def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume, **kwargs):
         # print(pr_open, pr_high, pr_low, pr_close, volume)
+        # today = self.current_simu_time.strftime("%Y-%m-%d")
+        # uvxy_cur_min_open = kwargs["UVXY_OPEN"]  # minute open
+        # if self.__uvxy_daily_open is None:
+        #     self.__uvxy_daily_open = uvxy_cur_min_open
+        # if self.__vix_daily_open is None:
+        #     self.__vix_daily_open = self.vix_daily["VIX_OPEN"].loc[today].iloc[0]
+        # uvxy_cur_min_corrected_open = uvxy_cur_min_open * self.__vix_daily_open / self.__uvxy_daily_open
+        # uvxy_relative_to_its_sma100 = uvxy_cur_min_corrected_open / self.vix_daily['VIX_OPEN_SMA100'].loc[today].iloc[0]
+        # print("{}: {}".format(self.current_simu_time, uvxy_relative_to_its_sma100))
+
         if self.__open_pr is None:
             self.__open_pr = pr_open
         if len(self.last_prices) == 0:
@@ -78,7 +100,7 @@ class AvoidSlump(SingleStockStrategy):
         rocp_ma = AvoidSlump.calc_rocp_of_sma(self.last_prices, self.sma_window)
 
         # now rocp_ma and zscored_drop_down have been obtained
-        # tempbuffer = (self.buffer + (pr_close - self.__open_pr) / self.__open_pr) if pr_close > self.__open_pr else self.buffer
+        # tempbuffer = self.buffer * 2 if uvxy_relative_to_its_sma100 < 1 else self.buffer
         cur_zhishun = self.calc_zhishun(pr_close, cur_z_min, rocp_ma,
                                         self.start_zhishun_condition,
                                         self.end_zhishun_condition,
@@ -90,11 +112,10 @@ class AvoidSlump(SingleStockStrategy):
         if cur_zhishun is None:
             self.order_target_percent(1.0)
             return
-        # at this time, zhishun line is present
-        cur_pos = self.positions.loc[self.current_simu_time]
-        if pr_close <= cur_zhishun:   # WARNING future function get involved.
-            self.order_target_percent(0.0, cur_zhishun)
-        elif cur_pos == 0:    # if zhishun line presents, and have already touched zhishun line, then do not buy
+        elif self.positions.iloc[self.current_simu_time_i] == 0:  # cur_zhishun presents, and is already closed
+            self.order_target_percent(0.0)  # keep closed.
+            return
+        if pr_close <= cur_zhishun:
             self.order_target_percent(0.0)
         else:
             self.order_target_percent(1.0)
