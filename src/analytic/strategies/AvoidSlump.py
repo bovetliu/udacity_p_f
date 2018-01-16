@@ -92,7 +92,7 @@ class AvoidSlump(SingleStockStrategy):
             return
         # at this time, zhishun line is present
         cur_pos = self.positions.loc[self.current_simu_time]
-        if pr_close <= cur_zhishun:
+        if pr_close <= cur_zhishun:   # WARNING future function get involved.
             self.order_target_percent(0.0, cur_zhishun)
         elif cur_pos == 0:    # if zhishun line presents, and have already touched zhishun line, then do not buy
             self.order_target_percent(0.0)
