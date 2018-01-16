@@ -3,3 +3,7 @@
 /.idea
 *.pyc
 */__pycache__/
+/src/quantopian_algs_backup
+src/analytic/.ipynb_checkpoints/
+src/analytic/__pycache__/
+src/course_code/__pycache__/
