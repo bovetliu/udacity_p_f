@@ -55,7 +55,7 @@ class TestStrategies(unittest.TestCase):
         # plt.show()
 
     @staticmethod
-    def provide_avoid_slump(symbol_name, historical_data):
+    def provide_avoid_slump(symbol_name, historical_data, zscore_threshold=0.0, buffer=0.004):
         """
         provide avoid slump with same parameters
         """
@@ -63,28 +63,30 @@ class TestStrategies(unittest.TestCase):
                           starting_cash=15000,
                           rocp_mean=-1.2456320934141318e-06,
                           rocp_std=0.00084797841463923234,
-                          zscore_threshold=0,
-                          sma_threshold=0)
+                          zscore_threshold=zscore_threshold,
+                          sma_threshold=0,
+                          buffer=buffer)
 
-    @unittest.skip("just for experimental")
+    # @unittest.skip("just for experimental")
     def test_save_figs(self):
         save_pic = True
         save_rtn_compare = True
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
-        data_frame = utility.get_cols_from_csv_names(file_names=['AMAT_to_2018-01-05'],
+        data_frame = utility.get_cols_from_csv_names(file_names=[utility.get_appropriate_file(symbol_name)],
                                                      interested_col=requested_col,
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
-        selected_dates = ["2017-06-27", "2017-11-02", "2017-07-07", "2017-07-05", "2017-11-20",
-                          "2017-10-26", "2017-08-11", "2017-10-03", "2017-09-18", "2017-08-08",
-                          "2017-12-18", "2017-09-27", "2017-06-28", "2017-07-03", "2017-07-11",
-                          "2018-01-03", "2017-11-08", "2017-11-27", "2017-12-15", "2017-07-17"]
-        # selected_dates = ["2017-07-03"]
+        # selected_dates = ['2017-11-02']
+        selected_dates = ['2017-11-20', '2017-07-07', '2017-06-13', '2017-06-29', '2017-09-18', '2017-10-26', '2017-06-27', '2017-08-25', '2017-08-11', '2017-06-21', '2017-10-09', '2017-12-15', '2017-08-14', '2017-10-31', '2017-07-17', '2017-07-19', '2017-08-04', '2017-10-16', '2017-07-03', '2017-12-19', '2017-08-28', '2017-08-22', '2017-06-19', '2017-11-24', '2017-09-11', '2017-08-07', '2017-12-18', '2017-12-13', '2017-10-20', '2017-09-15', '2017-11-21', '2017-08-30', '2017-10-06', '2017-11-08', '2017-06-05', '2017-07-05', '2017-09-27', '2017-06-07', '2017-10-13', '2017-12-12', '2017-12-29', '2017-08-08', '2017-07-21', '2017-09-06', '2017-07-06', '2017-11-15', '2017-08-23', '2017-07-26', '2017-06-28', '2017-09-07', '2017-11-10', '2017-06-12', '2017-09-08', '2017-11-06', '2017-06-06', '2017-07-14', '2017-09-01', '2017-08-31', '2017-10-03', '2017-11-02', '2017-12-11', '2017-09-22', '2017-12-28', '2017-08-15', '2017-06-20', '2017-11-03', '2017-12-08', '2017-10-11', '2017-08-29', '2017-10-19', '2017-06-22', '2017-05-26', '2017-12-14', '2017-06-23', '2017-06-16', '2017-11-13', '2017-07-13', '2017-10-24', '2017-06-02', '2017-06-01', '2017-05-31', '2017-10-02', '2017-11-27', '2017-08-03', '2017-11-28', '2017-11-07', '2017-07-20', '2017-12-22', '2017-07-24', '2017-07-11', '2017-09-19', '2017-09-28', '2017-08-21', '2017-10-05', '2017-08-17', '2017-11-16', '2017-10-30', '2017-07-10', '2017-10-17', '2017-06-08', '2017-07-18', '2018-01-02', '2017-10-12', '2017-11-30', '2017-06-14', '2017-09-14', '2017-09-20', '2017-09-21', '2017-09-05', '2017-07-28', '2017-08-09', '2017-11-01', '2017-09-12', '2017-08-24', '2017-05-30', '2018-01-04', '2017-10-04', '2017-09-13', '2017-08-16', '2017-10-23', '2017-10-10', '2017-09-29', '2017-12-07', '2017-12-27', '2017-12-26', '2018-01-03', '2017-11-14', '2017-09-26', '2017-12-04', '2018-01-05', '2017-11-22', '2017-12-06', '2017-08-01', '2017-10-27', '2017-06-15', '2017-10-18', '2017-07-25', '2017-06-30', '2017-09-25', '2017-08-10', '2017-12-21', '2017-07-12', '2017-07-31', '2017-10-25', '2017-08-02', '2017-12-20', '2017-07-27', '2017-11-09', '2017-06-26', '2017-12-01', '2017-08-18', '2017-06-09', '2017-12-05', '2017-11-17', '2017-11-29', '2017-05-29', '2017-07-04', '2017-09-04', '2017-11-23', '2017-12-25', '2018-01-01']
         for selected_date in selected_dates:
             selected_df = data_frame[selected_date]
-            avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df)
+            if len(selected_df) == 0:
+                continue
+            avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df,
+                                                                 zscore_threshold=-1.0,
+                                                                 buffer=0.003)
             avoid_slump_run.start()
             if save_pic:
                 self.trend_pic(avoid_slump_run, selected_date)
@@ -99,6 +101,8 @@ class TestStrategies(unittest.TestCase):
 
     # @unittest.skip("just for experimental")
     def test_avoid_slump(self):
+        output_per_day_result = True
+        output_daily_return = True
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
         data_frame = utility.get_cols_from_csv_names(file_names=[utility.get_appropriate_file(symbol_name)],
@@ -108,36 +112,73 @@ class TestStrategies(unittest.TestCase):
                                                      base_dir="../../rawdata")
 
         mean_z_7min = pd.Series.from_csv(path="../../rawdata/{}.csv".format("MEAN_Z_IN_7_MIN"),
-                           header=0,
-                           index_col=0,
-                           infer_datetime_format=True)
+                                         header=0,
+                                         index_col=0,
+                                         infer_datetime_format=True)
         mean_z_7min.name = "MEAN_Z_IN_7_MIN"
         data_frame = data_frame.assign(MEAN_Z_IN_7_MIN=mean_z_7min)
 
-        # selected_df = data_frame.loc['2017-08-18': '2017-08-19']
+        # selected_df = data_frame.loc['2017-08-18': '2017-08-31']
         selected_df = data_frame
-        avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df)
-        avoid_slump_run.start()
-        # print(avoid_slump_run.positions.head(100))
+        hist_z = []
+        hist_mean = []
+        hist_std = []
+        for i in np.arange(-1.0, -0.9, 0.1):
+            hist_z.append(i)
+            print("z_threshold: {}".format(i))
+            # selected_df = data_frame
+            avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df,
+                                                                 zscore_threshold=i,
+                                                                 buffer=0.003)
+            avoid_slump_run.start()
+            # print(avoid_slump_run.positions.head(100))
 
-        back_test_res_df = avoid_slump_run.generate_report()
+            back_test_res_df = avoid_slump_run.generate_report()
 
-        intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
-        back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
-        #  did back come fist
-        col_names = ["time", "intraday_effect", "INTRADAY_RTN", "INTRADAY_{}_RTN".format(symbol_name)]
-        back_test_res_df.sort_values(by="intraday_effect", inplace=True)
-        print("{}                 {}   {}   {}".format(*col_names))
+            intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
+            back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
+            back_test_res_df.sort_values(by="intraday_effect", inplace=True)
+            col_names = ["time", "intraday_effect", "INTRADAY_RTN", "INTRADAY_{}_RTN".format(symbol_name)]
 
-        for i in range(len(back_test_res_df)):
+            #  did back come fist
+            if output_per_day_result:
+                temp_dates = []
+                print("{}                 {}   {}   {}".format(*col_names))
+                for i in range(len(back_test_res_df)):
+                    print("{0}  {1:9.6f}%  {2:9.6f}%  {3:9.6f}%"
+                          .format(back_test_res_df.index[i], back_test_res_df[col_names[1]].iloc[i] * 100,
+                                  back_test_res_df[col_names[2]].iloc[i] * 100,
+                                  back_test_res_df[col_names[3]].iloc[i] * 100))
+                    temp_dates.append(back_test_res_df.index[i].strftime("%Y-%m-%d"))
+                print(np.array(temp_dates))
 
-            print("{0}  {1:9.6f}%  {2:9.6f}%  {3:9.6f}%"
-                  .format(back_test_res_df.index[i], back_test_res_df[col_names[1]].iloc[i] * 100,
-                          back_test_res_df[col_names[2]].iloc[i] * 100,
-                          back_test_res_df[col_names[3]].iloc[i] * 100))
+            if output_daily_return:
+                daily_last = avoid_slump_run.totals.groupby(pd.Grouper(level=0, freq='1B')).last()
+                daily_last = daily_last.dropna()
+                daily_last = daily_last / avoid_slump_run.starting_cash
+                daily_last.name = "daily_last"
+                daily_bnh = selected_df['AMAT_CLOSE'].groupby(pd.Grouper(level=0, freq='1B')).last()
+                daily_bnh = daily_bnh.dropna()
+                daily_bnh = daily_bnh / selected_df['AMAT_OPEN'].iloc[0]
+                daily_bnh.name = "daily_bnh"
 
-        print("\nintraday_effect.mean(): {0:9.6f}, intraday_effect.std(): {1:9.6f}".format(
-            back_test_res_df[col_names[1]].mean(), back_test_res_df[col_names[1]].std()))
+                ax = daily_last.plot(title="RETURN", legend=True)
+                daily_bnh.plot(ax=ax, legend=True)
+                plt.show()
+
+            print("\nintraday_effect.mean(): {0:9.6f}, \n"
+                  "intraday_effect.std(): {1:9.6f}, \n"
+                  "total_rtn: {2:9.6f}".format(
+                back_test_res_df[col_names[1]].mean(),
+                back_test_res_df[col_names[1]].std(),
+                avoid_slump_run.totals.iloc[-1] / avoid_slump_run.totals.iloc[0]))
+            hist_mean.append(back_test_res_df[col_names[1]].mean())
+            hist_std.append(back_test_res_df[col_names[1]].std())
+        result_df = pd.DataFrame({"mean": hist_mean, "std": hist_std}, index=hist_z)
+        result_df.index.name = "z_thld"
+        print(result_df.head(100))
+        result_df.to_csv("../../quantopian_algs_backup/back_search_result.csv")
+
 
     def test_calc_rocp_of_sma(self):
         """

@@ -15,7 +15,8 @@ class AvoidSlump(SingleStockStrategy):
                  drop_down_window=7,
                  sma_window=7,
                  zscore_threshold=-1.0,
-                 sma_threshold=0.0):
+                 sma_threshold=0.0,
+                 buffer=0.004):
         super().__init__(symbol_name, hist_data, begin_datetime, end_datetime, starting_cash)
         self.rocp_mean = rocp_mean
         self.rocp_std = rocp_std
@@ -32,6 +33,7 @@ class AvoidSlump(SingleStockStrategy):
         self.zhishun_line = []  # to be cleared before trading
         # start zhishun condition : <= self.zscore_threshold
         self.zscore_threshold = zscore_threshold
+        self.buffer = buffer
         # stop zhishun condition: not prev_need_zhishun and rocp_sma >= self.sma_threshold
         self.sma_threshold = sma_threshold
 
@@ -68,37 +70,37 @@ class AvoidSlump(SingleStockStrategy):
         left_bd = max(-self.drop_down_window, -len_prices)
         # zscored_drop_down = statistics.drop_down(self.last_prices[left_bd:], **self.rocp_params)
         cur_z_min = statistics.min_z_score(self.last_rocps[left_bd:], **self.rocp_params)
-        cur_z_max = statistics.max_z_score(self.last_rocps[left_bd:], **self.rocp_params)
-        cur_z_mean_over = cur_z_max + cur_z_min
+        # cur_z_max = statistics.max_z_score(self.last_rocps[left_bd:], **self.rocp_params)
+        # cur_z_mean_over = cur_z_max + cur_z_min
 
         # # external mean
-        # print("cur_z_min: {}, cur_z_max: {}, cur_z_mean_over: {}".format(
-        #     cur_z_min, cur_z_max, cur_z_mean_over))
         # cur_z_mean_over = kwargs["MEAN_Z_IN_7_MIN"]
         rocp_ma = AvoidSlump.calc_rocp_of_sma(self.last_prices, self.sma_window)
 
         # now rocp_ma and zscored_drop_down have been obtained
-        newest_zhishun = self.calc_zhishun(pr_close, cur_z_mean_over, rocp_ma,
-                                           self.start_zhishun_condition,
-                                           self.end_zhishun_condition,
-                                           buffer=0.004)
+        # tempbuffer = (self.buffer + (pr_close - self.__open_pr) / self.__open_pr) if pr_close > self.__open_pr else self.buffer
+        cur_zhishun = self.calc_zhishun(pr_close, cur_z_min, rocp_ma,
+                                        self.start_zhishun_condition,
+                                        self.end_zhishun_condition,
+                                        buffer=self.buffer)
         if len(self.zhishun_line) != len_prices:
             raise ValueError("len(self.zhishun_line): {}, while len_prices: {}".format(
                 len(self.zhishun_line), len_prices))
 
-        if newest_zhishun is None:
+        if cur_zhishun is None:
             self.order_target_percent(1.0)
             return
         # at this time, zhishun line is present
         cur_pos = self.positions.loc[self.current_simu_time]
-        if pr_close <= newest_zhishun:
-            self.order_target_percent(0.0)
+        if pr_close <= cur_zhishun:
+            self.order_target_percent(0.0, cur_zhishun)
         elif cur_pos == 0:    # if zhishun line presents, and have already touched zhishun line, then do not buy
             self.order_target_percent(0.0)
         else:
             self.order_target_percent(1.0)
 
-    def just_after_close(self):
+    def last_operation_of_trading_day(self):
+        self.order_target_percent(1.0)
         self.zhishun_line_befei = np.append(self.zhishun_line_befei, self.zhishun_line)
         self.daily_loss_control_beifen = np.append(self.daily_loss_control_beifen, self.__daily_loss_control)
         print("finished day : {}".format(self.current_simu_time.strftime('%Y-%m-%d')))

@@ -178,7 +178,7 @@ class SingleStockStrategy(ABC):
         pass
 
     @abstractmethod
-    def just_after_close(self):
+    def last_operation_of_trading_day(self):
         pass
 
     def start(self):
@@ -275,8 +275,8 @@ class SingleStockStrategy(ABC):
                 **row_dict)
 
             if one_period_after not in self.hist_data.index:
-                self.current_simu_time = time + pd.Timedelta("1 minute")
-                self.just_after_close()
+                self.last_operation_of_trading_day()
+                # self.current_simu_time = time + pd.Timedelta("1 minute")
 
     def __update(self):
         cur_simu_time_idx = self.hist_data.index.get_loc(self.current_simu_time)
