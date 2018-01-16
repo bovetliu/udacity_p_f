@@ -135,7 +135,9 @@ def get_appropriate_file(symbol):
         "SPY": "SPY_20090102-20171017",
         "XOM": "XOM_20100104-20171013",
         "IBM": "IBM_20100104-20171013",
-        "UVXY": "UVXY_20111223-20171222"
+        "VIX": "VIX_2016-07-27_2018-01-05_1_day",
+        "UVXY": "UVXY_2017-05-26_2018-01-05_1_min",
+        "UVXYD": "UVXY_20111223-20180105"
     }
 
     semiconductor_selected = ["MU", "TSM", "AMAT", "ASML",

@@ -151,6 +151,7 @@ class SingleStockStrategy(ABC):
         self.totals.iloc[0] = self.starting_cash
 
         self.current_simu_time = None
+        self.current_simu_time_i = None
         # TODO(Bowei) shrink following code, too clumsy
         found_period = False
         self.__one_period = self.hist_data.index[1] - self.hist_data.index[0]
@@ -186,40 +187,40 @@ class SingleStockStrategy(ABC):
 
     def order_target_percent(self, target_percent: float, overriding_price: float=None):
         cur_price = overriding_price if (overriding_price is not None) \
-            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
+            else self.hist_data.iloc[self.current_simu_time_i][self.col_dict['close']]
         if cur_price is None:
             raise ValueError("cur_price is None")
-        cur_pos = self.positions.loc[self.current_simu_time]
-        cur_cash = self.cashes.loc[self.current_simu_time]
+        cur_pos = self.positions.iloc[self.current_simu_time_i]
+        cur_cash = self.cashes.iloc[self.current_simu_time_i]
         cur_total = cur_price * cur_pos + cur_cash
         self.order_target_value(cur_total * target_percent, cur_price)
 
     def order_target_value(self, target_holding_value: float, overriding_price: float=None):
         cur_price = overriding_price if (overriding_price is not None) \
-            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
+            else self.hist_data.iloc[self.current_simu_time_i][self.col_dict['close']]
         abs_holding_val = abs(target_holding_value)
         target_pos = int(math.floor(abs_holding_val / cur_price)) * (1 if target_holding_value >= 0.0 else -1)
         self.order_target(target_pos, cur_price)
 
     def order_target(self, target_position: int, overriding_price: float=None):
         cur_price = overriding_price if (overriding_price is not None) \
-            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
-        cur_pos = self.positions.loc[self.current_simu_time]
+            else self.hist_data.iloc[self.current_simu_time_i][self.col_dict['close']]
+        cur_pos = self.positions.iloc[self.current_simu_time_i]
         self.order(target_position - cur_pos, cur_price)
 
     def order(self, pos: int, overriding_price: float):
         cur_price = overriding_price if (overriding_price is not None) \
-            else self.hist_data.loc[self.current_simu_time][self.col_dict['close']]
-        cur_cash = self.cashes.loc[self.current_simu_time]
-        cur_pos = self.positions.loc[self.current_simu_time]
+            else self.hist_data.iloc[self.current_simu_time_i][self.col_dict['close']]
+        cur_cash = self.cashes.iloc[self.current_simu_time_i]
+        cur_pos = self.positions.iloc[self.current_simu_time_i]
 
         value = pos * cur_price
 
         cur_cash_updated = cur_cash - self.__calc_commission(pos, cur_price) - value
         cur_pos_updated = cur_pos + pos
-        self.cashes.loc[self.current_simu_time] = cur_cash_updated
-        self.positions.loc[self.current_simu_time] = cur_pos_updated
-        self.totals.loc[self.current_simu_time] = cur_pos_updated * cur_price + cur_cash_updated
+        self.cashes.iloc[self.current_simu_time_i] = cur_cash_updated
+        self.positions.iloc[self.current_simu_time_i] = cur_pos_updated
+        self.totals.iloc[self.current_simu_time_i] = cur_pos_updated * cur_price + cur_cash_updated
 
     def __calc_commission(self, pos, avg_share_price=0):
         """
@@ -249,22 +250,21 @@ class SingleStockStrategy(ABC):
 
     def __iterate_bars(self):
         begin_end_indice = self.hist_data.index.slice_locs(start=self.begin_datetime, end=self.end_datetime)
-        for time in self.hist_data.index[begin_end_indice[0]:begin_end_indice[1]]:
-            one_period_before = time - self.__one_period
+        print(begin_end_indice)
+        for i in range(begin_end_indice[0], begin_end_indice[1]):
+            time = self.hist_data.index[i]
+            # one_period_before = time - self.__one_period
             one_period_after = time + self.__one_period
-            if one_period_before not in self.hist_data.index:
+            if time.hour == 9 and time.minute == 30:
                 # assume before trading
                 self.current_simu_time = time - pd.Timedelta("15 minutes")
                 self.before_trading()
-                # if self.current_simu_time.minute == 30:
-                #     self.__offset = pd.Timedelta("1 minute")
-                # elif self.current_simu_time == 31:
-                #     self.__offset = pd.Timedelta("0 minute")
 
             self.current_simu_time = time
+            self.current_simu_time_i = i
             self.__update()
 
-            row_ser = self.hist_data.loc[time]
+            row_ser = self.hist_data.iloc[i]
             row_dict = row_ser.to_dict()
             self.handle_data(
                 row_dict[self.col_dict['open']],
@@ -274,12 +274,13 @@ class SingleStockStrategy(ABC):
                 row_dict[self.col_dict['volume']],
                 **row_dict)
 
-            if one_period_after not in self.hist_data.index:
-                self.last_operation_of_trading_day()
-                # self.current_simu_time = time + pd.Timedelta("1 minute")
+            if time.minute == 59 and (time.hour == 12 or time.hour == 15):
+                if one_period_after not in self.hist_data.index:
+                    self.last_operation_of_trading_day()
+                    # self.current_simu_time = time + pd.Timedelta("1 minute")
 
     def __update(self):
-        cur_simu_time_idx = self.hist_data.index.get_loc(self.current_simu_time)
+        cur_simu_time_idx = self.current_simu_time_i
         if cur_simu_time_idx == 0:
             return
         prev_simu_time_idx = cur_simu_time_idx - 1
@@ -289,9 +290,9 @@ class SingleStockStrategy(ABC):
         cur_price = self.hist_data.iloc[cur_simu_time_idx][self.col_dict['close']]
         cur_total_in_record = self.totals.iloc[cur_simu_time_idx]
         if cur_total_in_record == 0:
-            self.cashes.loc[self.current_simu_time] = prev_cash
-            self.positions.loc[self.current_simu_time] = prev_pos
-            self.totals.loc[self.current_simu_time] = prev_pos * cur_price + prev_cash
+            self.cashes.iloc[self.current_simu_time_i] = prev_cash
+            self.positions.iloc[self.current_simu_time_i] = prev_pos
+            self.totals.iloc[self.current_simu_time_i] = prev_pos * cur_price + prev_cash
 
     def generate_report(self):
         """

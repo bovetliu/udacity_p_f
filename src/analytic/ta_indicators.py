@@ -274,8 +274,9 @@ def remove_shunhao(in_ser: pd.Series, name: str=None):
     """
     if not isinstance(in_ser, pd.Series):
         raise TypeError("in_ser must be pandas Series")
-    last_day = in_ser.index.max()
-    removed_arr = pd.Series([in_ser.loc[date] * 10**((date - last_day).days / 365.0) for date in in_ser.index],
+    t0 = in_ser.index.min()
+    base = 13  # TODO(Bowei) should use real VIX to calculate
+    removed_arr = pd.Series([in_ser.loc[t] * base**((t - t0).days / 365.0) for t in in_ser.index],
                             index=in_ser.index)
     removed_arr.name = in_ser.name + "_RM_SHUNHAO" if not name else name
     return removed_arr
