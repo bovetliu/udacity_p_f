@@ -105,3 +105,7 @@ class TestPerformance(unittest.TestCase):
     def test_numpy(self):
         my_list = [1, 2, 3, 4]
         self.assertEqual([3, 4], my_list[-2:])
+
+        my_ones = np.ones((5))
+        my_fives = np.multiply(my_ones, 5)
+        print(my_fives)

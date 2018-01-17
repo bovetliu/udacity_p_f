@@ -14,6 +14,18 @@ from analytic.strategies.AvoidSlump import AvoidSlump
 class TestStrategies(unittest.TestCase):
 
     @staticmethod
+    def trend_z_pic(avoid_slump_run: AvoidSlump, date, z_threshold, ax):
+        closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
+        z_s = pd.Series(avoid_slump_run.z_s_of_day, index=closes.index)
+        z_s.name = "z_s"
+        z_s.plot(ax=ax, title="z {} {}".format(avoid_slump_run.symbol_name, date), legend=True, ylim=(-10, 1))
+        threshold_line = np.multiply(np.ones((len(closes))), z_threshold)
+        threshold_line = pd.Series(threshold_line, index=closes.index)
+        threshold_line.name = "z_th={}".format(z_threshold)
+        threshold_line.plot(ax=ax, legend=True)
+        # ta_indicators.get_rolling_mean(z_s, window_size=7).plot(ax=ax, legend=True)
+
+    @staticmethod
     def trend_pic(avoid_slump_run: AvoidSlump, date, ax):
 
         closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
@@ -34,10 +46,6 @@ class TestStrategies(unittest.TestCase):
                         facecolors="red",
                         alpha=0.2,
                         transform=trans)
-        # plot_name = "{}_TREND_{}.png".format(avoid_slump_run.symbol_name, date)
-        # plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
-        # plt.close()
-        # plt.show()
 
     @staticmethod
     def rtn_compare_pic(avoid_slump_run: AvoidSlump, date, ax):
@@ -73,8 +81,10 @@ class TestStrategies(unittest.TestCase):
 
     # @unittest.skip("just for experimental")
     def test_save_figs(self):
-        save_pic = True
         save_rtn_compare = True
+        save_trend_pic = True
+        save_z_trend=True
+
         symbol_name = "AMAT"
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
         data_frame = utility.get_cols_from_csv_names(file_names=[utility.get_appropriate_file(symbol_name)],
@@ -83,12 +93,12 @@ class TestStrategies(unittest.TestCase):
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
 
-        selected_dates = ['2017-06-29']
-        # selected_dates = ['2017-11-20', '2017-07-07', '2017-06-13', '2017-06-29', '2017-09-18', '2017-10-26', '2017-06-27', '2017-08-25', '2017-08-11', '2017-06-21', '2017-10-09', '2017-12-15', '2017-08-14', '2017-10-31', '2017-07-17', '2017-07-19', '2017-08-04', '2017-10-16', '2017-07-03', '2017-12-19', '2017-08-28', '2017-08-22', '2017-06-19', '2017-11-24', '2017-09-11', '2017-08-07', '2017-12-18', '2017-12-13', '2017-10-20', '2017-09-15', '2017-11-21', '2017-08-30', '2017-10-06', '2017-11-08', '2017-06-05', '2017-07-05', '2017-09-27', '2017-06-07', '2017-10-13', '2017-12-12', '2017-12-29', '2017-08-08', '2017-07-21', '2017-09-06', '2017-07-06', '2017-11-15', '2017-08-23', '2017-07-26', '2017-06-28', '2017-09-07', '2017-11-10', '2017-06-12', '2017-09-08', '2017-11-06', '2017-06-06', '2017-07-14', '2017-09-01', '2017-08-31', '2017-10-03', '2017-11-02', '2017-12-11', '2017-09-22', '2017-12-28', '2017-08-15', '2017-06-20', '2017-11-03', '2017-12-08', '2017-10-11', '2017-08-29', '2017-10-19', '2017-06-22', '2017-05-26', '2017-12-14', '2017-06-23', '2017-06-16', '2017-11-13', '2017-07-13', '2017-10-24', '2017-06-02', '2017-06-01', '2017-05-31', '2017-10-02', '2017-11-27', '2017-08-03', '2017-11-28', '2017-11-07', '2017-07-20', '2017-12-22', '2017-07-24', '2017-07-11', '2017-09-19', '2017-09-28', '2017-08-21', '2017-10-05', '2017-08-17', '2017-11-16', '2017-10-30', '2017-07-10', '2017-10-17', '2017-06-08', '2017-07-18', '2018-01-02', '2017-10-12', '2017-11-30', '2017-06-14', '2017-09-14', '2017-09-20', '2017-09-21', '2017-09-05', '2017-07-28', '2017-08-09', '2017-11-01', '2017-09-12', '2017-08-24', '2017-05-30', '2018-01-04', '2017-10-04', '2017-09-13', '2017-08-16', '2017-10-23', '2017-10-10', '2017-09-29', '2017-12-07', '2017-12-27', '2017-12-26', '2018-01-03', '2017-11-14', '2017-09-26', '2017-12-04', '2018-01-05', '2017-11-22', '2017-12-06', '2017-08-01', '2017-10-27', '2017-06-15', '2017-10-18', '2017-07-25', '2017-06-30', '2017-09-25', '2017-08-10', '2017-12-21', '2017-07-12', '2017-07-31', '2017-10-25', '2017-08-02', '2017-12-20', '2017-07-27', '2017-11-09', '2017-06-26', '2017-12-01', '2017-08-18', '2017-06-09', '2017-12-05', '2017-11-17', '2017-11-29', '2017-05-29', '2017-07-04', '2017-09-04', '2017-11-23', '2017-12-25', '2018-01-01']
+        # selected_dates = ['2017-06-29']
+        selected_dates = ['2017-11-20', '2017-07-07', '2017-06-13', '2017-06-29', '2017-09-18', '2017-10-26', '2017-06-27', '2017-08-25', '2017-08-11', '2017-06-21', '2017-10-09', '2017-12-15', '2017-08-14', '2017-10-31', '2017-07-17', '2017-07-19', '2017-08-04', '2017-10-16', '2017-07-03', '2017-12-19', '2017-08-28', '2017-08-22', '2017-06-19', '2017-11-24', '2017-09-11', '2017-08-07', '2017-12-18', '2017-12-13', '2017-10-20', '2017-09-15', '2017-11-21', '2017-08-30', '2017-10-06', '2017-11-08', '2017-06-05', '2017-07-05', '2017-09-27', '2017-06-07', '2017-10-13', '2017-12-12', '2017-12-29', '2017-08-08', '2017-07-21', '2017-09-06', '2017-07-06', '2017-11-15', '2017-08-23', '2017-07-26', '2017-06-28', '2017-09-07', '2017-11-10', '2017-06-12', '2017-09-08', '2017-11-06', '2017-06-06', '2017-07-14', '2017-09-01', '2017-08-31', '2017-10-03', '2017-11-02', '2017-12-11', '2017-09-22', '2017-12-28', '2017-08-15', '2017-06-20', '2017-11-03', '2017-12-08', '2017-10-11', '2017-08-29', '2017-10-19', '2017-06-22', '2017-05-26', '2017-12-14', '2017-06-23', '2017-06-16', '2017-11-13', '2017-07-13', '2017-10-24', '2017-06-02', '2017-06-01', '2017-05-31', '2017-10-02', '2017-11-27', '2017-08-03', '2017-11-28', '2017-11-07', '2017-07-20', '2017-12-22', '2017-07-24', '2017-07-11', '2017-09-19', '2017-09-28', '2017-08-21', '2017-10-05', '2017-08-17', '2017-11-16', '2017-10-30', '2017-07-10', '2017-10-17', '2017-06-08', '2017-07-18', '2018-01-02', '2017-10-12', '2017-11-30', '2017-06-14', '2017-09-14', '2017-09-20', '2017-09-21', '2017-09-05', '2017-07-28', '2017-08-09', '2017-11-01', '2017-09-12', '2017-08-24', '2017-05-30', '2018-01-04', '2017-10-04', '2017-09-13', '2017-08-16', '2017-10-23', '2017-10-10', '2017-09-29', '2017-12-07', '2017-12-27', '2017-12-26', '2018-01-03', '2017-11-14', '2017-09-26', '2017-12-04', '2018-01-05', '2017-11-22', '2017-12-06', '2017-08-01', '2017-10-27', '2017-06-15', '2017-10-18', '2017-07-25', '2017-06-30', '2017-09-25', '2017-08-10', '2017-12-21', '2017-07-12', '2017-07-31', '2017-10-25', '2017-08-02', '2017-12-20', '2017-07-27', '2017-11-09', '2017-06-26', '2017-12-01', '2017-08-18', '2017-06-09', '2017-12-05', '2017-11-17', '2017-11-29', '2017-05-29', '2017-07-04', '2017-09-04', '2017-11-23', '2017-12-25', '2018-01-01']
         for selected_date in selected_dates:
-            fig, axes = plt.subplots(nrows=2, ncols=1, squeeze=False, sharex="col")
-            fig.set_figwidth(16)
-            fig.set_figheight(18)
+            fig, axes = plt.subplots(nrows=3, ncols=1, squeeze=False, sharex="col")
+            fig.set_figwidth(11)
+            fig.set_figheight(21)
             selected_df = data_frame[selected_date]
             if len(selected_df) == 0:
                 continue
@@ -96,11 +106,13 @@ class TestStrategies(unittest.TestCase):
                                                                  zscore_threshold=-1.0,
                                                                  buffer=0.003)
             avoid_slump_run.start()
-            if save_pic:
-                self.trend_pic(avoid_slump_run, selected_date, axes[0, 0])
 
             if save_rtn_compare:
-                self.rtn_compare_pic(avoid_slump_run, selected_date, axes[1, 0])
+                self.rtn_compare_pic(avoid_slump_run, selected_date, axes[0, 0])
+            if save_trend_pic:
+                self.trend_pic(avoid_slump_run, selected_date, axes[1, 0])
+            if save_z_trend:
+                self.trend_z_pic(avoid_slump_run, selected_date, avoid_slump_run.zscore_threshold, axes[2, 0])
 
             back_test_res_df = avoid_slump_run.generate_report()
             intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
@@ -108,13 +120,18 @@ class TestStrategies(unittest.TestCase):
             print(back_test_res_df['intraday_effect'])
 
             plot_name = "trend_and_rtn_compare_{}".format(selected_date)
-            plt.savefig("../../pictures/trend_and_compare/{}.png".format(plot_name))
+            if intraday_effect.iloc[0] > 0.005:
+                plt.savefig("../../pictures/trend_and_compare_good/{}.png".format(plot_name))
+            elif intraday_effect.iloc[0] > -0.005:
+                plt.savefig("../../pictures/trend_and_compare_neutral/{}.png".format(plot_name))
+            else:
+                plt.savefig("../../pictures/trend_and_compare_bad/{}.png".format(plot_name))
             plt.close()
 
     # @unittest.skip("just for experimental")
     def test_avoid_slump(self):
         output_per_day_result = True
-        output_daily_return_pic = False
+        output_daily_return_pic = True
         symbol_name = "AMAT"
         syms_to_ld = ["AMAT", "UVXY"]  # symbols to load
         requested_col = ['time', 'high', 'low', 'open', 'close', 'volume']
@@ -128,12 +145,12 @@ class TestStrategies(unittest.TestCase):
         hist_z = []
         hist_mean = []
         hist_std = []
-        for i in np.arange(-1.0, -0.9, 0.1):
-            hist_z.append(i)
-            print("z_threshold: {}".format(i))
+        for z_threshold in np.arange(-1.0, -0.9, 0.1):
+            hist_z.append(z_threshold)
+            print("z_threshold: {}".format(z_threshold))
             # selected_df = data_frame
             avoid_slump_run = TestStrategies.provide_avoid_slump(symbol_name, selected_df,
-                                                                 zscore_threshold=i,
+                                                                 zscore_threshold=z_threshold,
                                                                  buffer=0.003)
             avoid_slump_run.start()
             # print(avoid_slump_run.positions.head(100))
@@ -184,7 +201,6 @@ class TestStrategies(unittest.TestCase):
         result_df.index.name = "z_thld"
         print(result_df.head(100))
         result_df.to_csv("../../quantopian_algs_backup/back_search_result.csv")
-
 
     def test_calc_rocp_of_sma(self):
         """

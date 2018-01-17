@@ -39,6 +39,8 @@ class AvoidSlump(SingleStockStrategy):
 
         self.__daily_loss_control = []
         self.daily_loss_control_beifen = []
+        self.z_s_of_day = []
+        self.z_beifen = np.array([])
         self.__open_pr = None
         self.__uvxy_daily_open = None
         self.__vix_daily_open = None
@@ -49,11 +51,12 @@ class AvoidSlump(SingleStockStrategy):
                                                          keep_spy_if_not_having_spy=False,
                                                          base_dir="../../rawdata")
         self.vix_daily = self.vix_daily.assign(VIX_OPEN_SMA100=ta_indicators.get_rolling_mean(self.vix_daily["VIX_OPEN"], window_size=100))
-        print(self.vix_daily.head())
+        # print(self.vix_daily.head())
 
     def before_trading(self):
         """
         """
+        self.z_s_of_day.clear()
         self.__daily_loss_control.clear()
         self.last_rocps.clear()
         self.last_prices.clear()
@@ -92,6 +95,8 @@ class AvoidSlump(SingleStockStrategy):
         left_bd = max(-self.drop_down_window, -len_prices)
         # zscored_drop_down = statistics.drop_down(self.last_prices[left_bd:], **self.rocp_params)
         cur_z_min = statistics.min_z_score(self.last_rocps[left_bd:], **self.rocp_params)
+        self.z_s_of_day.append(cur_z_min)
+
         # cur_z_max = statistics.max_z_score(self.last_rocps[left_bd:], **self.rocp_params)
         # cur_z_mean_over = cur_z_max + cur_z_min
 
@@ -124,6 +129,7 @@ class AvoidSlump(SingleStockStrategy):
         self.order_target_percent(1.0)
         self.zhishun_line_befei = np.append(self.zhishun_line_befei, self.zhishun_line)
         self.daily_loss_control_beifen = np.append(self.daily_loss_control_beifen, self.__daily_loss_control)
+        self.z_beifen = np.append(self.z_beifen, self.z_s_of_day)
         print("finished day : {}".format(self.current_simu_time.strftime('%Y-%m-%d')))
 
     def calc_zhishun(self, cur_pr, zscored_drop_down, rocp_ma, should_start_zhishun, should_stop_zhishun, buffer=0.003):
