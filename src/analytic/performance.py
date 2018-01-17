@@ -222,6 +222,12 @@ class SingleStockStrategy(ABC):
         self.positions.iloc[self.current_simu_time_i] = cur_pos_updated
         self.totals.iloc[self.current_simu_time_i] = cur_pos_updated * cur_price + cur_cash_updated
 
+    def deduct_total_value_percent(self, to_be_ducted):
+        """
+        necessary function to offset possible future function effect, might used to calculate buffer
+        """
+        self.cashes.iloc[self.current_simu_time_i] *= (1 - to_be_ducted)
+
     def __calc_commission(self, pos, avg_share_price=0):
         """
         currently using Interactive brokers Stocks, ETFs (ETPs) and Warrants - Tiered Pricing Structure
