@@ -14,29 +14,33 @@ from analytic.strategies.AvoidSlump import AvoidSlump
 class TestStrategies(unittest.TestCase):
 
     @staticmethod
-    def trend_pic(avoid_slump_run: AvoidSlump, date):
+    def trend_pic(avoid_slump_run: AvoidSlump, date, ax):
 
         closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
-        ax = closes.plot(title="avoid slump strategy {} {}".format(avoid_slump_run.symbol_name, date),
-                         legend=True, figsize=(12, 7),
-                         ylim=(closes.min() - 0.5, max(closes.min() * 1.03, closes.max())), style="c.-")
+        closes.plot(ax=ax, title="avoid slump strategy {} {}".format(avoid_slump_run.symbol_name, date),
+                    legend=True,
+                    ylim=(closes.min() - 0.5, max(closes.min() * 1.03, closes.max())), style="c.-")
         ma = ta_indicators.get_rolling_mean(closes, avoid_slump_run.sma_window)
         ma.plot(ax=ax, legend=True)
         zhishun_line_pdser = pd.Series(avoid_slump_run.zhishun_line_befei, closes.index)
         zhishun_line_pdser.name = "zhishun_line"
         zhishun_line_pdser.plot(ax=ax, legend=True)
         trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.fill_between(closes.index, 0, 1, where=(avoid_slump_run.positions <= 0).values,
+        where_in_closed_position = avoid_slump_run.positions <= 0
+        shifted_position = avoid_slump_run.positions.shift(1)
+        where_starts_open = (shifted_position <= 0) & (0 < avoid_slump_run.positions)
+        where_in_closed_position = where_in_closed_position | where_starts_open
+        ax.fill_between(closes.index, 0, 1, where=where_in_closed_position.values,
                         facecolors="red",
                         alpha=0.2,
                         transform=trans)
-        plot_name = "{}_TREND_{}.png".format(avoid_slump_run.symbol_name, date)
-        plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
-        plt.close()
+        # plot_name = "{}_TREND_{}.png".format(avoid_slump_run.symbol_name, date)
+        # plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
+        # plt.close()
         # plt.show()
 
     @staticmethod
-    def rtn_compare_pic(avoid_slump_run: AvoidSlump, date):
+    def rtn_compare_pic(avoid_slump_run: AvoidSlump, date, ax):
         closes = avoid_slump_run.hist_data[date][avoid_slump_run.col_dict['close']]
         closes_rtn = ta_indicators.get_rocp(closes, 2).add(1).cumprod()
         closes_rtn.name = 'closes_rtn'
@@ -44,14 +48,14 @@ class TestStrategies(unittest.TestCase):
         totals_rtn = ta_indicators.get_rocp(totals, 2).add(1).cumprod()
         totals_rtn.name = "totals_rtn"
         ylim = (min(0.97, min(closes_rtn.min(), totals_rtn.min())), max(1.03, closes_rtn.max()))
-        ax = closes_rtn.plot(legend=True, figsize=(12, 7),
-                             title="B-N-H VS. AVOID SLUMP {} {}".format(avoid_slump_run.symbol_name, date),
-                             ylim=ylim)
+        closes_rtn.plot(ax=ax, legend=True,
+                        title="B-N-H VS. AVOID SLUMP {} {}".format(avoid_slump_run.symbol_name, date),
+                        ylim=ylim)
         totals_rtn.plot(ax=ax, legend=True)
 
-        plot_name = "{}_RTN_COMPARE_{}.png".format(avoid_slump_run.symbol_name, date)
-        plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
-        plt.close()
+        # plot_name = "{}_RTN_COMPARE_{}.png".format(avoid_slump_run.symbol_name, date)
+        # plt.savefig("../../quantopian_algs_backup/{}".format(plot_name))
+        # plt.close()
         # plt.show()
 
     @staticmethod
@@ -78,9 +82,13 @@ class TestStrategies(unittest.TestCase):
                                                      join_spy_for_data_integrity=False,
                                                      keep_spy_if_not_having_spy=False,
                                                      base_dir="../../rawdata")
+
         selected_dates = ['2017-11-20']
         # selected_dates = ['2017-11-20', '2017-07-07', '2017-06-13', '2017-06-29', '2017-09-18', '2017-10-26', '2017-06-27', '2017-08-25', '2017-08-11', '2017-06-21', '2017-10-09', '2017-12-15', '2017-08-14', '2017-10-31', '2017-07-17', '2017-07-19', '2017-08-04', '2017-10-16', '2017-07-03', '2017-12-19', '2017-08-28', '2017-08-22', '2017-06-19', '2017-11-24', '2017-09-11', '2017-08-07', '2017-12-18', '2017-12-13', '2017-10-20', '2017-09-15', '2017-11-21', '2017-08-30', '2017-10-06', '2017-11-08', '2017-06-05', '2017-07-05', '2017-09-27', '2017-06-07', '2017-10-13', '2017-12-12', '2017-12-29', '2017-08-08', '2017-07-21', '2017-09-06', '2017-07-06', '2017-11-15', '2017-08-23', '2017-07-26', '2017-06-28', '2017-09-07', '2017-11-10', '2017-06-12', '2017-09-08', '2017-11-06', '2017-06-06', '2017-07-14', '2017-09-01', '2017-08-31', '2017-10-03', '2017-11-02', '2017-12-11', '2017-09-22', '2017-12-28', '2017-08-15', '2017-06-20', '2017-11-03', '2017-12-08', '2017-10-11', '2017-08-29', '2017-10-19', '2017-06-22', '2017-05-26', '2017-12-14', '2017-06-23', '2017-06-16', '2017-11-13', '2017-07-13', '2017-10-24', '2017-06-02', '2017-06-01', '2017-05-31', '2017-10-02', '2017-11-27', '2017-08-03', '2017-11-28', '2017-11-07', '2017-07-20', '2017-12-22', '2017-07-24', '2017-07-11', '2017-09-19', '2017-09-28', '2017-08-21', '2017-10-05', '2017-08-17', '2017-11-16', '2017-10-30', '2017-07-10', '2017-10-17', '2017-06-08', '2017-07-18', '2018-01-02', '2017-10-12', '2017-11-30', '2017-06-14', '2017-09-14', '2017-09-20', '2017-09-21', '2017-09-05', '2017-07-28', '2017-08-09', '2017-11-01', '2017-09-12', '2017-08-24', '2017-05-30', '2018-01-04', '2017-10-04', '2017-09-13', '2017-08-16', '2017-10-23', '2017-10-10', '2017-09-29', '2017-12-07', '2017-12-27', '2017-12-26', '2018-01-03', '2017-11-14', '2017-09-26', '2017-12-04', '2018-01-05', '2017-11-22', '2017-12-06', '2017-08-01', '2017-10-27', '2017-06-15', '2017-10-18', '2017-07-25', '2017-06-30', '2017-09-25', '2017-08-10', '2017-12-21', '2017-07-12', '2017-07-31', '2017-10-25', '2017-08-02', '2017-12-20', '2017-07-27', '2017-11-09', '2017-06-26', '2017-12-01', '2017-08-18', '2017-06-09', '2017-12-05', '2017-11-17', '2017-11-29', '2017-05-29', '2017-07-04', '2017-09-04', '2017-11-23', '2017-12-25', '2018-01-01']
         for selected_date in selected_dates:
+            fig, axes = plt.subplots(nrows=2, ncols=1, squeeze=False, sharex="col")
+            fig.set_figwidth(16)
+            fig.set_figheight(18)
             selected_df = data_frame[selected_date]
             if len(selected_df) == 0:
                 continue
@@ -89,15 +97,19 @@ class TestStrategies(unittest.TestCase):
                                                                  buffer=0.003)
             avoid_slump_run.start()
             if save_pic:
-                self.trend_pic(avoid_slump_run, selected_date)
+                self.trend_pic(avoid_slump_run, selected_date, axes[0, 0])
 
             if save_rtn_compare:
-                self.rtn_compare_pic(avoid_slump_run, selected_date)
+                self.rtn_compare_pic(avoid_slump_run, selected_date, axes[1, 0])
 
             back_test_res_df = avoid_slump_run.generate_report()
             intraday_effect = back_test_res_df['INTRADAY_RTN'] - back_test_res_df['INTRADAY_{}_RTN'.format(symbol_name)]
             back_test_res_df = back_test_res_df.assign(intraday_effect=intraday_effect)
             print(back_test_res_df['intraday_effect'])
+
+            plot_name = "trend_and_rtn_compare_{}".format(selected_date)
+            plt.savefig("../../pictures/trend_and_compare/{}.png".format(plot_name))
+            plt.close()
 
     # @unittest.skip("just for experimental")
     def test_avoid_slump(self):
