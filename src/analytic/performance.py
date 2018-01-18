@@ -325,8 +325,10 @@ class SingleStockStrategy(ABC):
         # print(intraday_symbol_rtn.head())
 
         # print(self.totals.head(10))
+        dgrp[self.col_dict['open']].first() / dgrp[self.col_dict['close']].first()
         totals_grp = self.totals.groupby(pd.Grouper(level=0, freq='1B'))
-        intraday_rtn = (totals_grp.last() - totals_grp.first()) / totals_grp.first()
+        corrected_totals_grp_first = totals_grp.first() * (dgrp[self.col_dict['open']].first() / dgrp[self.col_dict['close']].first())
+        intraday_rtn = (totals_grp.last() - corrected_totals_grp_first) / corrected_totals_grp_first
         intraday_rtn.name = "INTRADAY_RTN"
         # print(intraday_rtn.head())
         self.back_test_result = pd.concat([operations_per_day, intraday_rtn, intraday_symbol_rtn], axis=1)
