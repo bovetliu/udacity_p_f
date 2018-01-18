@@ -153,6 +153,7 @@ class AvoidSlump(SingleStockStrategy):
                         # print("{} ** {}".format(1.0 - self.rocp_std / 2.0, len(self.zhishun_line) - self.last_zhishun_at_i))
                         extreme_go_down = (1.0 - self.rocp_std / 2.0) ** (len(self.zhishun_line) - self.last_zhishun_at_i)
                     lowest_allowed_new_zhishun = 0 if self.last_zhishun is None else self.last_zhishun * extreme_go_down
+                    # TODO(Bowei) need to add serious channel determination
                     if rocp_ma < 0:
                         tentative_new_zhishun = max(tentative_new_zhishun, lowest_allowed_new_zhishun)
                     self.zhishun_line.append(tentative_new_zhishun)
