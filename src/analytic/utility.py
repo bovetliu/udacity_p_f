@@ -62,6 +62,7 @@ def get_cols_from_csv_names(file_names: List[str],
         temp_symbol = file_name.split('_', 1)[0]
         col_rename_map = {
             'Adj Close': "{}_ADJ_CLOSE".format(temp_symbol),
+            'wap': "{}_WAP".format(temp_symbol),
             'close': "{}_CLOSE".format(temp_symbol),
             'Close': "{}_CLOSE".format(temp_symbol),
             'open': "{}_OPEN".format(temp_symbol),

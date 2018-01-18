@@ -37,7 +37,6 @@ class AvoidSlump(SingleStockStrategy):
         # stop zhishun condition: not prev_need_zhishun and rocp_sma >= self.sma_threshold
         self.sma_threshold = sma_threshold
 
-        self.__daily_loss_control = []
         self.daily_loss_control_beifen = []
         self.z_s_of_day = []
         self.z_beifen = np.array([])
@@ -51,13 +50,15 @@ class AvoidSlump(SingleStockStrategy):
                                                          keep_spy_if_not_having_spy=False,
                                                          base_dir="../../rawdata")
         self.vix_daily = self.vix_daily.assign(VIX_OPEN_SMA100=ta_indicators.get_rolling_mean(self.vix_daily["VIX_OPEN"], window_size=100))
-        # print(self.vix_daily.head())
+
+        # keep track of previous zhishun
+        self.last_zhishun_at_i = None
+        self.last_zhishun = None
 
     def before_trading(self):
         """
         """
         self.z_s_of_day.clear()
-        self.__daily_loss_control.clear()
         self.last_rocps.clear()
         self.last_prices.clear()
         self.zhishun_line.clear()
@@ -65,8 +66,7 @@ class AvoidSlump(SingleStockStrategy):
         self.__uvxy_daily_open = None
         self.__vix_daily_open = None
 
-    def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume, **kwargs):
-        # print(pr_open, pr_high, pr_low, pr_close, volume)
+    def handle_data(self, pr_open, pr_high, pr_low, pr_close, wap, volume, **kwargs):
         # today = self.current_simu_time.strftime("%Y-%m-%d")
         # uvxy_cur_min_open = kwargs["UVXY_OPEN"]  # minute open
         # if self.__uvxy_daily_open is None:
@@ -78,17 +78,14 @@ class AvoidSlump(SingleStockStrategy):
         # print("{}: {}".format(self.current_simu_time, uvxy_relative_to_its_sma100))
 
         if self.__open_pr is None:
+            # assuming strategy buy at opening
+            self.order_target_percent(1.0, pr_open)
             self.__open_pr = pr_open
         if len(self.last_prices) == 0:
-            self.last_rocps.append((pr_close - pr_open) / pr_open)
+            self.last_rocps.append((wap - pr_open) / pr_open)
         else:
-            self.last_rocps.append((pr_close - self.last_prices[-1]) / self.last_prices[-1])
-        self.last_prices.append(pr_close)
-        if len(self.__daily_loss_control) == 0:
-            self.__daily_loss_control.append(pr_close * 0.985)
-        else:
-            self.__daily_loss_control.append(max(self.__daily_loss_control[-1], pr_close * 0.985))
-        # print(self.__daily_loss_control[-1])
+            self.last_rocps.append((wap - self.last_prices[-1]) / self.last_prices[-1])
+        self.last_prices.append(wap)
 
         len_prices = len(self.last_prices)
 
@@ -106,7 +103,7 @@ class AvoidSlump(SingleStockStrategy):
 
         # now rocp_ma and zscored_drop_down have been obtained
         # tempbuffer = self.buffer * 2 if uvxy_relative_to_its_sma100 < 1 else self.buffer
-        cur_zhishun = self.calc_zhishun(pr_close, cur_z_min, rocp_ma,
+        cur_zhishun = self.calc_zhishun(wap, cur_z_min, rocp_ma,
                                         self.start_zhishun_condition,
                                         self.end_zhishun_condition,
                                         buffer=self.buffer)
@@ -120,7 +117,7 @@ class AvoidSlump(SingleStockStrategy):
         elif self.positions.iloc[self.current_simu_time_i] == 0:  # cur_zhishun presents, and is already closed
             self.order_target_percent(0.0)  # keep closed.
             return
-        if pr_close <= cur_zhishun:
+        if wap <= cur_zhishun:
             self.order_target_percent(0.0)
         else:
             self.order_target_percent(1.0)
@@ -128,12 +125,13 @@ class AvoidSlump(SingleStockStrategy):
     def last_operation_of_trading_day(self):
         self.order_target_percent(1.0)
         self.zhishun_line_befei = np.append(self.zhishun_line_befei, self.zhishun_line)
-        self.daily_loss_control_beifen = np.append(self.daily_loss_control_beifen, self.__daily_loss_control)
         self.z_beifen = np.append(self.z_beifen, self.z_s_of_day)
         print("finished day : {}".format(self.current_simu_time.strftime('%Y-%m-%d')))
 
     def calc_zhishun(self, cur_pr, zscored_drop_down, rocp_ma, should_start_zhishun, should_stop_zhishun, buffer=0.003):
         if len(self.zhishun_line) == 0:
+            self.last_zhishun_at_i = None
+            self.last_zhishun = None
             self.zhishun_line.append(None)
         else:
             prev_need_zhishun = self.zhishun_line[-1] is not None
@@ -141,12 +139,23 @@ class AvoidSlump(SingleStockStrategy):
             should_extend_zhishun = prev_need_zhishun and (not should_stop_zhishun(cur_pr, zscored_drop_down, rocp_ma))
             cur_need_zhishun = does_start_zhishun or should_extend_zhishun
             if not cur_need_zhishun:
+                if self.zhishun_line[-1] is not None:
+                    self.last_zhishun = self.zhishun_line[-1]
+                    self.last_zhishun_at_i = len(self.zhishun_line) - 1
                 self.zhishun_line.append(None)
             else:
                 if prev_need_zhishun:
                     self.zhishun_line.append(self.zhishun_line[-1])
                 else:
-                    self.zhishun_line.append(cur_pr * (1 - buffer))
+                    tentative_new_zhishun = cur_pr * (1 - buffer)
+                    extreme_go_down = 0
+                    if self.last_zhishun_at_i is not None and len(self.zhishun_line) - self.last_zhishun_at_i <= 15:
+                        # print("{} ** {}".format(1.0 - self.rocp_std / 2.0, len(self.zhishun_line) - self.last_zhishun_at_i))
+                        extreme_go_down = (1.0 - self.rocp_std / 2.0) ** (len(self.zhishun_line) - self.last_zhishun_at_i)
+                    lowest_allowed_new_zhishun = 0 if self.last_zhishun is None else self.last_zhishun * extreme_go_down
+                    if rocp_ma < 0:
+                        tentative_new_zhishun = max(tentative_new_zhishun, lowest_allowed_new_zhishun)
+                    self.zhishun_line.append(tentative_new_zhishun)
         return self.zhishun_line[-1]
 
     def start_zhishun_condition(self, cur_pr, zscored_drop_down, rocp_ma):

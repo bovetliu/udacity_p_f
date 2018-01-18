@@ -135,6 +135,7 @@ class SingleStockStrategy(ABC):
             "high": "{}_HIGH".format(symbol_name),
             "low": "{}_LOW".format(symbol_name),
             "close": "{}_CLOSE".format(symbol_name),
+            "wap": "{}_WAP".format(symbol_name),
             "volume": "{}_VOLUME".format(symbol_name),
         }
         self.hist_data = hist_data
@@ -175,7 +176,7 @@ class SingleStockStrategy(ABC):
         pass
 
     @abstractmethod
-    def handle_data(self, pr_open, pr_high, pr_low, pr_close, volume, **kwargs):
+    def handle_data(self, pr_open, pr_high, pr_low, pr_close, wap, volume, **kwargs):
         pass
 
     @abstractmethod
@@ -213,7 +214,8 @@ class SingleStockStrategy(ABC):
             else self.hist_data.iloc[self.current_simu_time_i][self.col_dict['close']]
         cur_cash = self.cashes.iloc[self.current_simu_time_i]
         cur_pos = self.positions.iloc[self.current_simu_time_i]
-
+        # if pos:
+        #     print("time: {}, pos: {}, cur_price: {}".format( self.current_simu_time, pos, cur_price))
         value = pos * cur_price
 
         cur_cash_updated = cur_cash - self.__calc_commission(pos, cur_price) - value
@@ -277,6 +279,7 @@ class SingleStockStrategy(ABC):
                 row_dict[self.col_dict['high']],
                 row_dict[self.col_dict['low']],
                 row_dict[self.col_dict['close']],
+                row_dict[self.col_dict['wap']],
                 row_dict[self.col_dict['volume']],
                 **row_dict)
 
