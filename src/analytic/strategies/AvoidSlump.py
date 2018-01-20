@@ -1,7 +1,9 @@
-from analytic.performance import SingleStockStrategy
+
 from analytic import statistics, utility, ta_indicators
 
 import numpy as np
+
+from analytic.strategies.base import SingleStockStrategy
 
 
 class AvoidSlump(SingleStockStrategy):
