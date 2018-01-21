@@ -3,9 +3,12 @@ Feel that convex might generate meaningful results to identify where is nearest 
 """
 import math
 from enum import Enum
+import collections
 
 from datetime import datetime
 from analytic.models import convex_hull
+
+import matplotlib.pyplot as plt
 
 
 class Accuracy(Enum):
@@ -13,6 +16,78 @@ class Accuracy(Enum):
     MINUTE = 2
     HOUR = 3
     DAY = 4
+
+
+class HalfScan:
+
+    def __init__(self, find_support=True):
+        """
+
+        :param initial_prices:
+        :param find_support: means find counter clockwise turns
+        """
+        self.__all_prices = collections.OrderedDict()
+        self.__last_pr_pt = None
+        self.__hull = collections.deque([])
+        self.__find_support = find_support
+
+    def add(self, price_point):
+        """
+        add one point to all prices, and adjust existing points on hull, and add latest point to hull
+        :param price_point:
+        :return:
+        """
+        if not isinstance(price_point, PricePoint):
+            raise TypeError("price_point must be an instance of convex_hull.PricePoint")
+        if self.__last_pr_pt is not None and self.__last_pr_pt.timestamp() >= price_point.timestamp():
+            raise ValueError("price point must be added in a strictly monotonely increasing regarding timestamp.")
+        self.__last_pr_pt = price_point
+        self.__all_prices[self.__last_pr_pt.timestamp()] = self.__last_pr_pt
+        if len(self.__hull) < 2:
+            self.__hull.append(price_point)
+            return
+
+        top = self.__hull.pop()
+        if self.__find_support:
+            while PricePoint.ccw(self.__hull[-1], top, price_point) <= 0:
+                # TODO(Bowei) in future, add pop condition, to find local support or resistance
+                top = self.__hull.pop()
+        else:
+            while PricePoint.ccw(self.__hull[-1], top, price_point) >= 0:
+                top = self.__hull.pop()
+        self.__hull.append(top)
+        self.__hull.append(price_point)
+
+    def add_all(self, price_points):
+        raise Error("Not yet implemented")
+        # defensive_cp = []
+        # for pr in price_points:
+        #     if not isinstance(pr, PricePoint):
+        #         raise ValueError("element in price_points is not valid")
+        #     if len(defensive_cp) > 0:
+        #         if [defensive_cp[-1].timestamp() < pr.timestamp()]:
+        #             raise ValueError("Price point is not in non-decreasing order")
+        #     defensive_cp.append(pr)
+        # for pr in defensive_cp:
+        #     self.__all_prices[pr.timestamp()] = pr
+
+    def quick_plot(self, ax=None):
+        timestamps_01 = []
+        pr_pts_02 = []
+        for k, v in self.__all_prices.items():
+            timestamps_01.append(k)
+            pr_pts_02.append(v)
+        prices_01 = [pt.price() for pt in pr_pts_02]
+        timestamps_02 = []
+        prices_02 = []
+        for pr_pt in self.__hull:
+            timestamps_02.append(pr_pt.timestamp())
+            prices_02.append(pr_pt.price())
+        if ax is not None:
+            ax.plot(timestamps_01, prices_01, 'b-', timestamps_02, prices_02, 'g-')
+        else:
+            plt.plot(timestamps_01, prices_01, 'b-', timestamps_02, prices_02, 'g-')
+        plt.show()
 
 
 class PricePoint:
@@ -78,7 +153,7 @@ class PricePoint:
         return self.__price == other.__price and self.__accu == other.__accu and self.__x == other.__x
 
     def __str__(self):
-        return "PricePoint({}, {}, {}, {})".format(
+        return "PricePoint(starting_timestamp={}, timestamp={}, price={}, accu={})".format(
             self.__starting_timestamp, self.__timestamp, self.__price, self.__accu)
 
     @classmethod
