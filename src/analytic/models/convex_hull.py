@@ -31,6 +31,9 @@ class HalfScan:
         self.__hull = collections.deque([])
         self.__find_support = find_support
 
+        # store a subset of hull vertexes, local min, or local max, should be updated at the same method of self.__hull
+        self.__key_prices = collections.deque([])
+
     def add(self, price_point):
         """
         add one point to all prices, and adjust existing points on hull, and add latest point to hull
@@ -44,19 +47,47 @@ class HalfScan:
         self.__last_pr_pt = price_point
         self.__all_prices[self.__last_pr_pt.timestamp()] = self.__last_pr_pt
         if len(self.__hull) < 2:
-            self.__hull.append(price_point)
+            self.__append_to_hull(price_point)
             return
 
-        top = self.__hull.pop()
+        top = self.__pop_from_hull()
         if self.__find_support:
             while PricePoint.ccw(self.__hull[-1], top, price_point) <= 0:
-                # TODO(Bowei) in future, add pop condition, to find local support or resistance
-                top = self.__hull.pop()
+                top = self.__pop_from_hull()
         else:
             while PricePoint.ccw(self.__hull[-1], top, price_point) >= 0:
-                top = self.__hull.pop()
-        self.__hull.append(top)
+                top = self.__pop_from_hull()
+        self.__append_to_hull(top)
+        self.__append_to_hull(price_point)
+
+    def __append_to_hull(self, price_point):
+        if not isinstance(price_point, PricePoint):
+            raise TypeError("price_point must be an instance of convex_hull.PricePoint")
         self.__hull.append(price_point)
+        if len(self.__hull) == 1:
+            self.__key_prices.append(price_point)
+            return
+        elif len(self.__hull) == 2:
+            return
+        # at this time, self.__hull must have at least 3 prices.
+        # angle minus 2, angle minus 1
+        angle_2 = self.__hull[-3].angle_to(self.__hull[-2])
+        angle_1 = self.__hull[-2].angle_to(self.__hull[-1])
+        if angle_2 < 0 and angle_1 >= 0 and self.__find_support and \
+                self.__key_prices[-1].timestamp() < self.__hull[-2].timestamp():
+            # print("key_price appended02: {}".format(self.__hull[-2]))
+            self.__key_prices.append(self.__hull[-2])
+        elif angle_2 > 0 and angle_1 <= 0 and (not self.__find_support) and \
+                self.__key_prices[-1].timestamp() < self.__hull[-2].timestamp():
+            # print("key_price appended03: {}".format(self.__hull[-2]))
+            self.__key_prices.append(self.__hull[-2])
+
+    def __pop_from_hull(self):
+        top = self.__hull.pop()
+        if top == self.__key_prices[-1]:
+            # print("key_price popped: {}".format(top))
+            self.__key_prices.pop()
+        return top
 
     def add_all(self, price_points):
         raise Error("Not yet implemented")
