@@ -80,7 +80,7 @@ def get_rocp(in_ser: pd.Series, window_size, name: str = None, expanding=True) -
         if len(arr) <= 1:
             return 0
         return (arr[-1] - arr[0]) / arr[0]
-    tbr = in_ser.rolling(window_size, 1 if expanding else None, closed='both').apply(roc)
+    tbr = in_ser.rolling(window_size, 1 if expanding else None, closed='both').apply(roc, raw=True)
     tbr.name = '{}_ROCP_{}'.format(in_ser.name, window_size) if not name else name
     return tbr
 

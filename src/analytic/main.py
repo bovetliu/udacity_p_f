@@ -606,7 +606,7 @@ def practice_slump_prevention():
         'close': 'AMAT_CLOSE',
     }
     rolling_max_drop_down = the_df_selected['AMAT_CLOSE'].rolling(window=7, min_periods=1, closed="both")\
-        .apply(statistics.drop_down, kwargs=kwargs)
+        .apply(statistics.drop_down, kwargs=kwargs, raw=True)
 
     closes_of_selected = the_df_selected['AMAT_CLOSE']
     ma = ta_indicators.get_rolling_mean(closes_of_selected, window_size=7)
