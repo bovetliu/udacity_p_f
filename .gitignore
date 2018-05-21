@@ -7,3 +7,13 @@
 src/analytic/.ipynb_checkpoints/
 src/analytic/__pycache__/
 src/course_code/__pycache__/
+
+
+venv/bin
+venv/include
+venv/lib
+venv/lib64
+venv/pip-selfcheck.json
+venv/pyvenv.cfg
+venv/pip-selfcheck.json
+venv/share
