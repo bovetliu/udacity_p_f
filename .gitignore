@@ -1,12 +1,12 @@
-/src/rawdata
-/src/pictures
+/src/main/resources/rawdata
+/src/main/resources/pictures
 /.idea
 *.pyc
 */__pycache__/
-/src/quantopian_algs_backup
-src/analytic/.ipynb_checkpoints/
-src/analytic/__pycache__/
-src/course_code/__pycache__/
+/src/main/resources/quantopian_algs_backup
+src/main/python/analytic/.ipynb_checkpoints/
+src/main/python/analytic/__pycache__/
+src/main/python/course_code/__pycache__/
 
 
 venv/bin

@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from course_code.a0102_python_for_finance01 import get_data_from_file_names
+from analytic.utility import RAW_DATA_PATH
 
 
 def symbol_to_path(symbol, base_dir="data"):

@@ -1,8 +1,8 @@
 import pandas
 import matplotlib.pyplot as plt
 from typing import List
-
-RAW_DATA_PATH = "../rawdata"
+from os import path
+from analytic.utility import RAW_DATA_PATH
 
 
 def get_max_close(file_name):
@@ -11,13 +11,13 @@ def get_max_close(file_name):
     :param file_name: file name of csv
     :return: max close price of this csv
     """
-    df = pandas.read_csv("../rawdata/{}.csv".format(file_name))
+    df = pandas.read_csv(path.join(RAW_DATA_PATH, "{}.csv".format(file_name)))
     # df['Volume'].mean()  # calculate mean of column
     return df['Close'].max()
 
 
 def test_run():
-    data_frame = pandas.read_csv("../rawdata/AAPL_20100104-20171013.csv")
+    data_frame = pandas.read_csv(path.join(RAW_DATA_PATH, "AAPL_20100104-20171013.csv"))
     print("data_frame.tail(5)")
     print(data_frame.tail(5))
     print("\ndata_frame.head(5)")
@@ -38,7 +38,7 @@ def test_run():
 
 
 def get_data_from_file_names(file_names: List[str], dates: pandas.DatetimeIndex=None,
-                             base_dir="../rawdata") -> pandas.DataFrame:
+                             base_dir=RAW_DATA_PATH) -> pandas.DataFrame:
     """
 
     :param file_names: list of file names
@@ -60,7 +60,7 @@ def get_data_from_file_names(file_names: List[str], dates: pandas.DatetimeIndex=
         file_names.insert(0, "SPY_20100104-20171013")
 
     for file_name in file_names:
-        df_temp = pandas.read_csv("{}/{}.csv".format(base_dir, file_name), index_col='Date',
+        df_temp = pandas.read_csv(path.join(base_dir, "{}.csv".format(file_name)), index_col='Date',
                                   parse_dates=True,
                                   usecols=['Date', 'Adj Close'],
                                   na_values=['NaN']).rename(columns={'Adj Close': file_name.split('_', 1)[0]})
