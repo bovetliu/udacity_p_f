@@ -39,12 +39,12 @@ class BarSize(Enum):
 def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars: int, bar_size: BarSize,
                                inside_rth: bool) -> DataFrame:
     """
-
-    :param symbol:
-    :param end_local_date_str:
-    :param num_of_bars:
-    :param bar_size:
-    :param inside_rth:
+    get historical data from api
+    :param symbol: stock symbol
+    :param end_local_date_str: end date string, having a format of "%Y%m%d %H:%M:%S"
+    :param num_of_bars: number of bars
+    :param bar_size: bar size
+    :param inside_rth: inside Regular Trading Hours ?
     :return: a pandas.DataFrame indexed by m_time_iso
     """
     if not symbol:
@@ -82,16 +82,18 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_pa
     :param bar_size:
     :param symbol: stock symbol
     :param file_path: target file path to hold data
-    :return: true if new data is downloaded, false means file_path is already updated.
+    :return: the pandas.DateFrame updated.
     """
     if bar_size != BarSize.DAY_1:
         raise ValueError("bar_size only supports DAY_1")
     if type(symbol) is not str or not symbol:
         raise ValueError("symbol cannot be None or emtpy")
     symbol = symbol.upper()
+    # noinspection PyUnresolvedReferences
     current_timestamp = pd.Timestamp(ts_input=datetime.datetime.now())
-    if not file_path:
-        file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA.csv"
+    if file_path is None:
+        file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA-{}.csv".format(
+            "DAILY" if bar_size == BarSize.DAY_1 else "MINUTELY")
     num_of_days_needed = 272
     orignal_df = None
     try:
@@ -112,3 +114,15 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_pa
         orignal_df.loc[ele] = df.loc[ele]
     orignal_df.to_csv(file_path)
     return orignal_df
+
+
+def get_local_data(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None) -> DataFrame:
+    if type(symbol) is not str or not symbol:
+        raise ValueError("symbol cannot be None or emtpy")
+    symbol = symbol.upper()
+    if bar_size != BarSize.DAY_1:
+        raise ValueError("bar_size only supports DAY_1")
+    if file_path is None:
+        file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA-{}.csv".format(
+            "DAILY" if bar_size == BarSize.DAY_1 else "MINUTELY")
+    return pd.read_csv(file_path, parse_dates=True, index_col="m_time_iso", dtype=__dtype_dict)

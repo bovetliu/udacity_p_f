@@ -7,7 +7,9 @@ import os
 
 
 PROJ_PATH = dirname(dirname(dirname(dirname(os.path.abspath(dirname(__file__))))))
-RAW_DATA_PATH = os.path.join(PROJ_PATH, "src", "main", "resources", "rawdata")
+MAIN_RESOURCES_PATH = os.path.join(PROJ_PATH, "src", "main", "resources")
+TEST_RESOURCES_PATH = os.path.join(PROJ_PATH, "src", "test", "resources")
+RAW_DATA_PATH = os.path.join(MAIN_RESOURCES_PATH, "rawdata")
 
 
 def get_bars_of_stock(file_name: str, dates: pd.DatetimeIndex = None, base_dir="../rawdata") -> pd.DataFrame:
