@@ -1,9 +1,11 @@
-import unittest
-from analytic.data.tws_data_api_connector import BarSize
-from analytic.data import tws_data_api_connector
-from analytic.utility import RAW_DATA_PATH
 import os
+import unittest
+
 import pandas as pd
+
+from analytic.data import tws_data_api_connector
+from analytic.data.tws_data_api_connector import BarSize
+from analytic.utility import RAW_DATA_PATH
 
 
 class TestTwsDataApiConnector(unittest.TestCase):
@@ -35,7 +37,7 @@ class TestTwsDataApiConnector(unittest.TestCase):
         self.assertTrue("m_open" in df.columns)
         self.assertTrue("m_volume" in df.columns)
         self.assertTrue("m_wap" in df.columns)
-        target_row = df.loc[pd.Timestamp("2018-05-25 09:00:00")]
+        target_row = df.loc[pd.Timestamp(ts_input="2018-05-25 09:00:00")]
         # print(target_row)
         self.assertEqual(target_row["m_close"], 249.28)
         self.assertEqual(target_row["m_count"], 23654)

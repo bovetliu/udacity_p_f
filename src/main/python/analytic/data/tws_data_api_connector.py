@@ -1,11 +1,11 @@
-from typing import List
-from enum import Enum
-import requests
-import json
-import pandas as pd
-from pandas import DataFrame
-import numpy as np
 import datetime
+from enum import Enum
+
+import numpy as np
+import pandas as pd
+import requests
+from pandas import DataFrame
+
 from analytic import time_utils
 from analytic.utility import RAW_DATA_PATH
 
@@ -54,9 +54,6 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     # api - endpoint
     url = "http://localhost:8080/stockData/reqHistoricalPrices"
 
-    # location given here
-    location = "delhi technological university"
-
     # defining a params dict for the parameters to be sent to the API
     params = {
         "symbol": symbol,
@@ -79,7 +76,7 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     return df
 
 
-def sync_sombol_to_local(symbol: str, bar_size: BarSize=BarSize.DAY_1, file_path: str=None):
+def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None):
     """
     by default store 1 year worth daily data to target file_path
     :param bar_size:
@@ -115,5 +112,3 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize=BarSize.DAY_1, file_path
         orignal_df.loc[ele] = df.loc[ele]
     orignal_df.to_csv(file_path)
     return orignal_df
-
-
