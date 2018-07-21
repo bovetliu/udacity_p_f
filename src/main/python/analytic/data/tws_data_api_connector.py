@@ -39,7 +39,7 @@ class BarSize(Enum):
 def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars: int, bar_size: BarSize,
                                inside_rth: bool) -> DataFrame:
     """
-    get historical data from api
+    get historical data from stockData app.
     :param symbol: stock symbol
     :param end_local_date_str: end date string, having a format of "%Y%m%d %H:%M:%S"
     :param num_of_bars: number of bars
@@ -71,14 +71,14 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     df["m_time_iso"] = pd.to_datetime(df["m_time_iso"], yearfirst=True)
     df.set_index("m_time_iso", inplace=True)
     df.drop("m_time", axis=1, inplace=True)
-
-    # print(df.head(5))
     return df
 
 
 def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None):
     """
-    by default store 1 year worth daily data to target file_path
+    fetch 272 trading-day-worth daily data using method get_historical_data_prices(...) and merge with local data of
+    the same symbol. If there is no local symbol file, create it.
+
     :param bar_size:
     :param symbol: stock symbol
     :param file_path: target file path to hold data

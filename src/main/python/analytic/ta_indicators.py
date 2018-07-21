@@ -1,12 +1,10 @@
-from typing import Tuple
+from typing import Tuple, List
 import numpy as np
 import pandas as pd
 import re
-import matplotlib.pyplot as plt
-
-from analytic import utility
 
 __CLOSE_COL_PATTERN = re.compile('[A-Z]{1,5}_CLOSE')
+
 
 def get_window_normalized(in_ser: pd.Series, window_size: int, std_multiplier: int=2, name: str=None) -> pd.Series:
     """
@@ -64,6 +62,27 @@ def get_ema(in_ser: pd.Series, window_size: int, name: str=None) -> pd.Series:
         raise ValueError("window size should be larger than 0")
     tbr = in_ser.ewm(span=window_size, min_periods=window_size, adjust=False).mean()
     tbr.name = '{}_EMA_{}'.format(in_ser.name, window_size) if not name else name
+    return tbr
+
+
+def get_3_ema_fenli(in_ser: pd.Series, window_sizes: List[int], name: str=None) -> pd.Series:
+    """
+    get fenli of given ema windows.
+    :param in_ser: in coming pandas Series
+    :param window_sizes: a list of ema window sizes
+    :param name: output name
+    :return: fenli of EMAs
+    """
+    if not isinstance(in_ser, pd.Series):
+        raise TypeError("in_ser should be pandas Series")
+    if not isinstance(window_sizes, list) or len(window_sizes) == 0:
+        raise ValueError("window_sizes should be a list of larger-than-zero length")
+    emas = [get_ema(in_ser, window_size) for window_size in window_sizes]
+    df = pd.concat(emas, axis=1, keys=[s.name for s in emas])
+    ema_std = df.apply(lambda ema_ser: np.NaN if ema_ser.isna().any() else np.std(ema_ser), axis=1)
+    ema_mean = df.apply(lambda ema_ser: np.NaN if ema_ser.isna().any() else np.mean(ema_ser), axis=1)
+    tbr = ema_std / ema_mean
+    tbr.name = '{}_EMA_FENLI'.format(in_ser.name) if not name else name
     return tbr
 
 
@@ -281,6 +300,31 @@ def remove_shunhao(in_ser: pd.Series, name: str=None):
     removed_arr.name = in_ser.name + "_RM_SHUNHAO" if not name else name
     return removed_arr
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###  ==========================================================
 
 # Stochastic oscillator %K
 def get_stok_osci_k(df):

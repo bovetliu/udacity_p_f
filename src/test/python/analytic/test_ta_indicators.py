@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from analytic import ta_indicators, utility
+from analytic.data import tws_data_api_connector
 
 
 class TestTAIndicators(unittest.TestCase):
@@ -52,3 +53,29 @@ class TestTAIndicators(unittest.TestCase):
         # ax = uvxy_daily_open.plot(title="uvxy daily open")
         # uvxy_daily_open_sma.plot(ax=ax)
         # plt.show()
+
+    def test_get_3_ema_fenli_plot(self):
+        symbol = "NVDA"
+        nvda_df = tws_data_api_connector.get_local_data(symbol)
+        nvda_closes = nvda_df["m_close"]
+        window_sizes = [20, 35, 50]
+        fenli = ta_indicators.get_3_ema_fenli(nvda_closes, window_sizes)
+
+        fig, ax1 = plt.subplots()
+        nvda_closes.plot(title="nvda price vs fenli", ax=ax1, style='b-')
+        ax1.set_xlabel('date')
+        ax1.set_ylabel('price')
+
+        ax2 = ax1.twinx()
+        fenli.plot(ax=ax2, style='c-')
+        ax2.set_ylabel('fenli')
+        fig.tight_layout()
+        plt.show()
+
+    def test_get_3_ema_fenli(self):
+        symbol = "NVDA"
+        nvda_df = tws_data_api_connector.get_local_data(symbol)
+        nvda_closes = nvda_df["m_close"]
+        window_sizes = [20, 35, 50]
+        fenli = ta_indicators.get_3_ema_fenli(nvda_closes, window_sizes)
+        print(fenli)
