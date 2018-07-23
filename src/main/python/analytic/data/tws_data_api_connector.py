@@ -1,5 +1,7 @@
 import datetime
+import os
 from enum import Enum
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -7,7 +9,7 @@ import requests
 from pandas import DataFrame
 
 from analytic import time_utils
-from analytic.utility import RAW_DATA_PATH
+from analytic.utility import RAW_DATA_PATH, MAIN_RESOURCES_PATH
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -114,6 +116,47 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_pa
         orignal_df.loc[ele] = df.loc[ele]
     orignal_df.to_csv(file_path)
     return orignal_df
+
+
+def query_symbol_list(index_name: str, query=None, queried_column: str = None, return_df: bool = False) -> List[str]:
+    """
+    find symbols matching query
+
+    :param index_name: index name like "sp500"
+    :param query: the query, can be one single str or a list of strings, such as "lmt" or ["Advanced", "apple"]
+    :param queried_column: specify which column should be used to match
+    :param return_df: indicate whether to return DataFrame or a list of symbols
+    :return: list of symbols matching query.
+    """
+    if isinstance(queried_column, str) and queried_column.lower() == "symbol":
+        if isinstance(query, str):
+            query = query.upper()
+    if query is not None and (not isinstance(query, str) and not isinstance(query, list)):
+        raise TypeError("query can only be a str or a list of strings")
+    index_symbols_dir = os.path.join(MAIN_RESOURCES_PATH, "index_symbols")
+    target_file = os.path.join(index_symbols_dir, index_name + ".csv")
+    symbol_df = pd.read_csv(target_file, index_col="symbol", dtype={
+        "symbol": np.str,
+        "name": np.str,
+        "sector": np.str
+    })
+    if queried_column == "sector":
+        if isinstance(query, str):
+            symbol_df = symbol_df.loc[symbol_df['sector'] == query]
+        elif isinstance(query, list):
+            symbol_df = symbol_df.loc[symbol_df['sector'].isin(query)]
+    if (queried_column is None and query is not None) or queried_column == "name":
+        def filter_func(name):
+            if name is None or not isinstance(name, str):
+                return False
+            name = name.lower()
+            if isinstance(query, str):
+                return query.lower() in name
+            else:
+                return any(q.lower() in name for q in query)
+        symbol_df = symbol_df.loc[symbol_df["name"].apply(filter_func)]
+
+    return symbol_df if return_df else symbol_df.index.tolist()
 
 
 def get_local_data(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None) -> DataFrame:

@@ -75,3 +75,40 @@ class TestTwsDataApiConnector(unittest.TestCase):
         self.assertEqual(target_row["m_volume"], 50867)
         self.assertAlmostEqual(target_row["m_wap"], 248.876, 2)
         os.remove(dest_filie_path)
+
+    def test_query_index(self):
+        symbols = tws_data_api_connector.query_symbol_list("sp500")
+        self.assertEqual(505, len(symbols), "without supplying query, should get a length of 505")
+        symbols = tws_data_api_connector.query_symbol_list("sp500", query="Industrials", queried_column="sector")
+        num_indus_symbol = len(symbols)
+        self.assertFalse("FB" in symbols)
+        self.assertFalse("GOOGL" in symbols)
+
+        symbols = tws_data_api_connector.query_symbol_list(
+            "sp500", query="Information Technology", queried_column="sector")
+        num_it = len(symbols)
+        self.assertTrue("GOOG" in symbols)
+        self.assertTrue("GOOGL" in symbols)
+        self.assertTrue("FB" in symbols)
+
+        target_sectors = ["Information Technology", "Industrials"]
+        symbols = tws_data_api_connector.query_symbol_list(
+            "sp500", query=target_sectors, queried_column="sector", return_df=True)
+        self.assertTrue(isinstance(symbols, pd.DataFrame))
+        self.assertTrue("GOOG" in symbols.index)
+        self.assertTrue("LMT" in symbols.index)
+        self.assertEqual(num_indus_symbol + num_it, len(symbols))
+
+        # search companies of which the name has "apple" or "advanced"
+        symbols = tws_data_api_connector.query_symbol_list("sp500", query="apple")
+        self.assertTrue("AAPL" in symbols)
+        self.assertTrue("DPS" in symbols)
+        symbols = tws_data_api_connector.query_symbol_list("sp500", query=["apple", "advanced", "asdf"])
+        self.assertTrue("AAPL" in symbols)
+        self.assertTrue("DPS" in symbols)
+        self.assertTrue("AMD" in symbols)
+        symbols = tws_data_api_connector.query_symbol_list("sp500", query=["apple", "advanced", "asdf"],
+                                                           queried_column="name")
+        self.assertTrue("AAPL" in symbols)
+        self.assertTrue("DPS" in symbols)
+        self.assertTrue("AMD" in symbols)
