@@ -69,7 +69,7 @@ BAC,Bank of America Corp,Financials
 BAX,Baxter International Inc.,Health Care
 BBT,BB&T Corporation,Financials
 BDX,Becton Dickinson,Health Care
-BRK.B,Berkshire Hathaway,Financials
+BRK B,Berkshire Hathaway,Financials
 BBY,Best Buy Co. Inc.,Consumer Discretionary
 BIIB,Biogen Inc.,Health Care
 BLK,BlackRock,Financials
@@ -82,7 +82,7 @@ BSX,Boston Scientific,Health Care
 BHF,Brighthouse Financial Inc,Financials
 BMY,Bristol-Myers Squibb,Health Care
 AVGO,Broadcom,Information Technology
-BF.B,Brown-Forman Corp.,Consumer Staples
+BF B,Brown-Forman Corp.,Consumer Staples
 CHRW,C. H. Robinson Worldwide,Industrials
 CA,"CA, Inc.",Information Technology
 COG,Cabot Oil & Gas,Energy
@@ -132,7 +132,6 @@ GLW,Corning Inc.,Information Technology
 COST,Costco Wholesale Corp.,Consumer Staples
 COTY,"Coty, Inc",Consumer Staples
 CCI,Crown Castle International Corp.,Real Estate
-CSRA,CSRA Inc.,Information Technology
 CSX,CSX Corp.,Industrials
 CMI,Cummins Inc.,Industrials
 CVS,CVS Health,Consumer Staples
@@ -154,7 +153,7 @@ DLTR,Dollar Tree,Consumer Discretionary
 D,Dominion Energy,Utilities
 DOV,Dover Corp.,Industrials
 DWDP,DowDuPont,Materials
-DPS,Dr Pepper Snapple Group,Consumer Staples
+KDP,Dr Pepper Snapple Group,Consumer Staples
 DTE,DTE Energy Co.,Utilities
 DUK,Duke Energy,Utilities
 DRE,Duke Realty Corp,Real Estate
@@ -281,7 +280,7 @@ LH,Laboratory Corp. of America Holding,Health Care
 LRCX,Lam Research,Information Technology
 LEG,Leggett & Platt,Consumer Discretionary
 LEN,Lennar Corp.,Consumer Discretionary
-LUK,Leucadia National Corp.,Financials
+JEF,Leucadia National Corp.,Financials
 LLY,Lilly (Eli) & Co.,Health Care
 LNC,Lincoln National,Financials
 LKQ,LKQ Corporation,Consumer Discretionary
@@ -316,7 +315,6 @@ MAA,Mid-America Apartments,Real Estate
 MHK,Mohawk Industries,Consumer Discretionary
 TAP,Molson Coors Brewing Company,Consumer Staples
 MDLZ,Mondelez International,Consumer Staples
-MON,Monsanto Co.,Materials
 MNST,Monster Beverage,Consumer Staples
 MCO,Moody's Corp,Financials
 MS,Morgan Stanley,Financials
@@ -444,7 +442,6 @@ TRV,The Travelers Companies Inc.,Financials
 DIS,The Walt Disney Company,Consumer Discretionary
 TMO,Thermo Fisher Scientific,Health Care
 TIF,Tiffany & Co.,Consumer Discretionary
-TWX,Time Warner Inc.,Consumer Discretionary
 TJX,TJX Companies Inc.,Consumer Discretionary
 TMK,Torchmark Corp.,Financials
 TSS,Total System Services,Information Technology
@@ -493,7 +490,6 @@ WY,Weyerhaeuser Corp.,Real Estate
 WHR,Whirlpool Corp.,Consumer Discretionary
 WMB,Williams Cos.,Energy
 WLTW,Willis Towers Watson,Financials
-WYN,Wyndham Worldwide,Consumer Discretionary
 WYNN,Wynn Resorts Ltd,Consumer Discretionary
 XEL,Xcel Energy Inc,Utilities
 XRX,Xerox Corp.,Information Technology
