@@ -79,7 +79,7 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     return df
 
 
-def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None):
+def get_local_synced(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None):
     """
     fetch 272 trading-day-worth daily data using method get_historical_data_prices(...) and merge with local data of
     the same symbol. If there is no local symbol file, create it.
@@ -141,6 +141,8 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
     :param return_df: indicate whether to return DataFrame or a list of symbols
     :return: list of symbols matching query.
     """
+    if index_name != "sp500":
+        raise ValueError("For now only sp500 is supported.")
     if isinstance(queried_column, str) and queried_column.lower() == "symbol":
         if isinstance(query, str):
             query = query.upper()

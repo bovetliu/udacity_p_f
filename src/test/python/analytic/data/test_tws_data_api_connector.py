@@ -32,7 +32,7 @@ class TestTwsDataApiConnector(unittest.TestCase):
     def test_sync_sombol_to_local(self):
         symbol = "NVDA"
         target_file = os.path.join(RAW_DATA_PATH, "{}-TWS-DATA-DAILY.csv".format(symbol))
-        tws_data_api_connector.sync_sombol_to_local(symbol)
+        tws_data_api_connector.get_local_synced(symbol)
         df = pd.read_csv(target_file, parse_dates=True, index_col="m_time_iso")
         self.assertTrue("m_time_iso" == df.index.name)
         self.assertTrue("m_close" in df.columns)
@@ -126,7 +126,7 @@ class TestTwsDataApiConnector(unittest.TestCase):
             time.sleep(0.5)
             print("going to sync {}...".format(symbol))
             try:
-                tws_data_api_connector.sync_sombol_to_local(symbol)
+                tws_data_api_connector.get_local_synced(symbol)
             except (HTTPError, requests.exceptions.Timeout) as err:
                 print("one error, symbol : {}".format(symbol))
                 problematic_symbols.append(symbol)
