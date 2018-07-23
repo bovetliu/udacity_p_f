@@ -1,8 +1,11 @@
 import os
 import shutil
+import time
 import unittest
 
 import pandas as pd
+import requests
+from requests import HTTPError
 
 from analytic.data import tws_data_api_connector
 from analytic.data.tws_data_api_connector import BarSize
@@ -112,3 +115,22 @@ class TestTwsDataApiConnector(unittest.TestCase):
         self.assertTrue("AAPL" in symbols)
         self.assertTrue("DPS" in symbols)
         self.assertTrue("AMD" in symbols)
+
+    @unittest.skip  # no reason needed
+    def test_syn_sp500(self):
+        print("going to sync 500 stocks to local")
+        symbols = tws_data_api_connector.query_symbol_list("sp500", return_df=False)
+        # symbols = ['WYN']
+        problematic_symbols = []
+        for symbol in symbols:
+            time.sleep(0.5)
+            print("going to sync {}...".format(symbol))
+            try:
+                tws_data_api_connector.sync_sombol_to_local(symbol)
+            except (HTTPError, requests.exceptions.Timeout) as err:
+                print("one error, symbol : {}".format(symbol))
+                problematic_symbols.append(symbol)
+        if len(problematic_symbols) > 0:
+            print("problematic symbols: ")
+            print(problematic_symbols)
+

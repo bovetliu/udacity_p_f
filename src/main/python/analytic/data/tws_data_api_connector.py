@@ -67,6 +67,8 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
 
     # sending get request and saving the response as response object
     r = requests.get(url=url, params=params, timeout=20)
+    r.raise_for_status()
+
     # extracting data in json format
     # data = r.json()
     df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
