@@ -116,11 +116,11 @@ class TestTwsDataApiConnector(unittest.TestCase):
         self.assertTrue("DPS" in symbols)
         self.assertTrue("AMD" in symbols)
 
-    @unittest.skip  # no reason needed
+    # @unittest.skip  # no reason needed
     def test_syn_sp500(self):
         print("going to sync 500 stocks to local")
-        symbols = tws_data_api_connector.query_symbol_list("sp500", return_df=False)
-        # symbols = ['WYN']
+        # symbols = tws_data_api_connector.query_symbol_list("sp500", return_df=False)
+        symbols = ['AAPL']
         problematic_symbols = []
         for symbol in symbols:
             time.sleep(0.5)

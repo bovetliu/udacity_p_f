@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 from pandas import DataFrame
+from pandas.tseries.offsets import BDay
 
 from analytic import time_utils
 from analytic.utility import RAW_DATA_PATH, MAIN_RESOURCES_PATH
@@ -94,7 +95,13 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_pa
         raise ValueError("symbol cannot be None or emtpy")
     symbol = symbol.upper()
     # noinspection PyUnresolvedReferences
-    current_timestamp = pd.Timestamp(ts_input=datetime.datetime.now())
+    current_timestamp = pd.Timestamp(2018, 7, 20, 10, 44)
+    minus_one_bday = current_timestamp - BDay()
+    temp = minus_one_bday + BDay()
+    if temp != current_timestamp:
+        recent_bday = pd.Timestamp(minus_one_bday.year, minus_one_bday.month, minus_one_bday.day)
+    else:
+        recent_bday = pd.Timestamp(current_timestamp.year, current_timestamp.month, current_timestamp.day)
     if file_path is None:
         file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA-{}.csv".format(
             "DAILY" if bar_size == BarSize.DAY_1 else "MINUTELY")
@@ -102,14 +109,18 @@ def sync_sombol_to_local(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_pa
     orignal_df = None
     try:
         orignal_df = pd.read_csv(file_path, parse_dates=True, index_col="m_time_iso", dtype=__dtype_dict)
-        time_delta = current_timestamp - orignal_df.index[-1]
-        print("time_delta.days: {}".format(time_delta.days))
+        last_timestamp = orignal_df.index[-1]
+        last_day = pd.Timestamp(last_timestamp.year, last_timestamp.month, last_timestamp.day)
+        time_delta = recent_bday - last_day
+        # print("time_delta.days: {}".format(time_delta.days))
         num_of_days_needed = time_delta.days
+        if num_of_days_needed == 0:
+            return orignal_df
+        elif num_of_days_needed < 0:
+            raise ValueError("num_of_days_needed: {} smaller than 0, this is illegal state.".format(num_of_days_needed))
     except FileNotFoundError:
         print("no filepath : {}".format(file_path))
-
     end_local_date_str = current_timestamp.strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
-    print("end_local_date_str: {}".format(end_local_date_str))
     df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed, bar_size, True)
     if orignal_df is None:
         df.to_csv(file_path)
