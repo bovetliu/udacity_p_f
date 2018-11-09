@@ -147,6 +147,46 @@ def get_daily_return_2(
     return intra_day_rtn, gaps_rtn
 
 
+def get_draw_down(in_ser: pd.Series, window: int=None, name: str=None) -> pd.Series:
+    """
+    calculate draw down from maximum inside a given window. If window is None, then maximum is obtained from all
+    previous data points.
+
+    :param in_ser: stores at least Open, High, Low, Close
+    :param window: how many days to look back to compute maximum
+    :param name: series name
+    :return: a pandas Series recording draw down percentage
+    """
+    if (window is not None) and not isinstance(window, int):
+        raise TypeError("If window supplied, it must be a integer")
+    if (window is not None) and window <= 0:
+        raise ValueError("window must be positive integer")
+    effective_window = window
+    if effective_window is None:
+        effective_window = len(in_ser)
+    tbr = in_ser / in_ser.rolling(window=effective_window, min_periods=1, closed="both").max()
+    tbr.name = name if name else '{}_{}_DRAWDOWN'.format(
+        in_ser.name, "MAXIMUM" if window is None else str(effective_window))
+    return tbr
+
+
+def get_reversed_draw_down(in_ser: pd.Series, window: int=None, name: str=None) -> pd.Series:
+    """
+    first value copied to an series of same length of in_ser, the divide this series by in_ser, calculate draw down
+    from maximum inside a given window.
+    :param in_ser: stores at least Open, High, Low, Close
+    :param window: how many days to look back to compute maximum
+    :param name: overriding name
+    :return: reversed draw_down, used to determine over-bought
+    """
+    # temp = pd.Series(np.full(len(in_ser), in_ser.iloc[0]), in_ser.index)
+    # print(temp)
+    tbr = get_draw_down(pd.Series(np.full(len(in_ser), in_ser.iloc[0]), in_ser.index) / in_ser, window=window)
+    tbr.name = name if name else '{}_{}_REVERSE_DRAWDOWN'.format(
+        in_ser.name, "MAXIMUM" if window is None else str(window))
+    return tbr
+
+
 def get_ln_return(in_ser: pd.Series, name: str=None) -> pd.Series:
     tbr = in_ser.apply(np.log) - in_ser.shift(1).apply(np.log)
     tbr.name = name if name else '{}_LNRTN'.format(in_ser.name)

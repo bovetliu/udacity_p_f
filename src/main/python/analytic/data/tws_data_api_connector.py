@@ -95,7 +95,8 @@ def get_local_synced(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: 
         raise ValueError("symbol cannot be None or emtpy")
     symbol = symbol.upper()
     # noinspection PyUnresolvedReferences
-    current_timestamp = pd.Timestamp(2018, 7, 20, 10, 44)
+    # current_timestamp = pd.Timestamp(2018, 7, 20, 10, 44)
+    current_timestamp = pd.Timestamp(ts_input=datetime.datetime.now())
     minus_one_bday = current_timestamp - BDay()
     temp = minus_one_bday + BDay()
     if temp != current_timestamp:

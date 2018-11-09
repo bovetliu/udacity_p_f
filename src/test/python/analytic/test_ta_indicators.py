@@ -1,5 +1,8 @@
 import unittest
 
+import datetime
+
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -8,6 +11,32 @@ from analytic.data import tws_data_api_connector
 
 
 class TestTAIndicators(unittest.TestCase):
+
+    def test_calculate_ema(self):
+        closes = np.ndarray(shape=(100, 3), dtype=float)
+        period = 30
+        k = 2.0 / (period + 1.0)
+        print(k)
+
+        print(closes.shape)
+        self.assertEqual((100, 3), closes.shape)
+        print(closes)
+
+        # delete last row
+
+        deleted_earliest = closes[2:]
+        print(deleted_earliest)
+        self.assertEqual((len(closes) - 2, 3), deleted_earliest.shape)
+        # numpy.ma.average(a, axis=None, weights=None, returned=False)[source]
+        weights = [k * ((1 - k) ** i) for i in reversed(range(0, len(deleted_earliest)))]
+        print(weights)
+        print(len(weights))
+        ema = np.ma.average(deleted_earliest, axis=0, weights=weights, returned=False)
+        ema = ema + closes[0] * (1 - k) ** len(closes)
+        print(ema)
+
+        for i in reversed(range(2, 10)):
+            print(i)
 
     def test_get_frws(self):
         series = pd.Series([15, 15, 15, 16, 17, 18, 17, 16, 15, 15.5, 19, 21, 4], name='DEMO')
@@ -79,3 +108,56 @@ class TestTAIndicators(unittest.TestCase):
         window_sizes = [20, 35, 50]
         fenli = ta_indicators.get_3_ema_fenli(nvda_closes, window_sizes)
         print(fenli)
+
+    def test_get_draw_down(self):
+        symbol = "LMT"
+        tws_data_api_connector.get_local_synced(symbol)
+        nvda_df = tws_data_api_connector.get_local_data(symbol)
+        nvda_df_closes = nvda_df["m_close"]
+        nvda_df_closes = nvda_df_closes.iloc[-272:]
+        nvda_df_closes.name = "{}_close".format(symbol)
+
+        plt.figure(1, figsize=(8, 16))
+        plt.subplot(4, 1, 1)
+        plt.plot(nvda_df_closes.index, nvda_df_closes.values, 'g-')
+        plt.xlabel('date')
+        plt.ylabel('price')
+
+        plt.subplot(4, 1, 2)
+        window = None
+        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
+
+        line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
+        plt.setp(line_reversed_drawdown, alpha=.5)
+        plt.xlabel('date')
+        plt.ylabel('ratio')
+        plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
+
+        plt.subplot(4, 1, 3)
+        window = 100
+        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
+        line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
+        plt.setp(line_reversed_drawdown, alpha=.5)
+        plt.xlabel('date')
+        plt.ylabel('ratio')
+        plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
+
+        plt.subplot(4, 1, 4)
+        window = 50
+        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
+        line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
+        plt.setp(line_reversed_drawdown, alpha=.5)
+        plt.xlabel('date')
+        plt.ylabel('ratio')
+        plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
+        plt.savefig("/home/boweiliu/workrepo/udacity_p_f_pics/drawdown/drawdown_{}_{}.png".format
+                    (symbol, datetime.datetime.now().date().isoformat()),
+                    bbox_inches='tight')
+        # plt.show()
+        # print(reversed_drawdown)
