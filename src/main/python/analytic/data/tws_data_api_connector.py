@@ -106,7 +106,7 @@ def get_local_synced(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: 
     if file_path is None:
         file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA-{}.csv".format(
             "DAILY" if bar_size == BarSize.DAY_1 else "MINUTELY")
-    num_of_days_needed = 272
+    num_of_days_needed = 544
     orignal_df = None
     try:
         orignal_df = pd.read_csv(file_path, parse_dates=True, index_col="m_time_iso", dtype=__dtype_dict)
@@ -151,17 +151,16 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
         raise TypeError("query can only be a str or a list of strings")
     index_symbols_dir = os.path.join(MAIN_RESOURCES_PATH, "index_symbols")
     target_file = os.path.join(index_symbols_dir, index_name + ".csv")
-    symbol_df = pd.read_csv(target_file, index_col="symbol", dtype={
-        "symbol": np.str,
-        "name": np.str,
-        "sector": np.str
+    symbol_df = pd.read_csv(target_file, index_col="#", dtype= {
+        "#": np.int32,
+        "Company": np.str,
+        "Symbol": np.str,
+        "Weight": np.float32,
+        "Price": np.float32,
+        "Change": np.float32
     })
-    if queried_column == "sector":
-        if isinstance(query, str):
-            symbol_df = symbol_df.loc[symbol_df['sector'] == query]
-        elif isinstance(query, list):
-            symbol_df = symbol_df.loc[symbol_df['sector'].isin(query)]
-    if (queried_column is None and query is not None) or queried_column == "name":
+
+    if (queried_column is None and query is not None) or queried_column == "Company":
         def filter_func(name):
             if name is None or not isinstance(name, str):
                 return False
@@ -170,9 +169,9 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
                 return query.lower() in name
             else:
                 return any(q.lower() in name for q in query)
-        symbol_df = symbol_df.loc[symbol_df["name"].apply(filter_func)]
+        symbol_df = symbol_df.loc[symbol_df["Company"].apply(filter_func)]
 
-    return symbol_df if return_df else symbol_df.index.tolist()
+    return symbol_df if return_df else symbol_df["Symbol"].tolist()
 
 
 def get_local_data(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None) -> DataFrame:

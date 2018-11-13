@@ -1,0 +1,104 @@
+#,Company,Symbol,Weight,Price,Change
+1,Apple Inc,AAPL,12.195,192.8,-11.67
+2,Microsoft Corp,MSFT,10.375,106.48,-3.09
+3,Amazon.com Inc,AMZN,10.314,1623.0,-89.43
+4,Alphabet Inc,GOOG,4.606,1034.98,-31.17
+5,Facebook Inc,FB,4.317,140.92,-4.04
+6,Alphabet Inc,GOOGL,3.975,1045.0,-32.02
+7,Intel Corp,INTC,2.739,46.56,-1.55
+8,Cisco Systems Inc,CSCO,2.736,45.75,-1.36
+9,Comcast Corp,CMCSA,2.165,38.0,-0.34
+10,PepsiCo Inc,PEP,2.052,116.75,-0.73
+11,Netflix Inc,NFLX,1.632,292.0,-11.47
+12,NVIDIA Corp,NVDA,1.544,190.01,-15.66
+13,Amgen Inc,AMGN,1.544,192.0,-1.16
+14,Adobe Inc,ADBE,1.48,237.0,-7.84
+15,Costco Wholesale Corp,COST,1.287,234.0,-3.74
+16,Broadcom Inc,AVGO,1.274,222.88,-16.11
+17,PayPal Holdings Inc,PYPL,1.268,83.0,-3.76
+18,Texas Instruments Inc,TXN,1.154,93.47,-2.63
+19,Starbucks Corp,SBUX,1.143,67.98,-0.62
+20,Gilead Sciences Inc,GILD,1.139,70.44,-0.74
+21,Booking Holdings Inc,BKNG,1.136,1906.0,-31.64
+22,QUALCOMM Inc,QCOM,1.029,54.35,-2.37
+23,Walgreens Boots Alliance Inc,WBA,1.01,81.85,-0.54
+24,Charter Communications Inc,CHTR,0.919,323.35,2.24
+25,Kraft Heinz Co/The,KHC,0.813,53.67,-0.32
+26,Biogen Inc,BIIB,0.809,318.0,-7.2
+27,Mondelez International Inc,MDLZ,0.802,44.0,-0.3
+28,Automatic Data Processing Inc,ADP,0.796,144.17,-3.02
+29,CSX Corp,CSX,0.749,69.66,-1.0
+30,Intuitive Surgical Inc,ISRG,0.748,504.0,-28.56
+31,Tesla Inc,TSLA,0.738,328.5,-22.01
+32,T-Mobile US Inc,TMUS,0.719,69.25,0.57
+33,Intuit Inc,INTU,0.71,212.87,-9.3
+34,Express Scripts Holding Co,ESRX,0.684,98.2,-0.28
+35,Celgene Corp,CELG,0.643,70.86,-3.16
+36,Baidu Inc ADR,BIDU,0.637,179.0,-4.75
+37,Twenty-First Century Fox Inc,FOXA,0.627,48.07,-0.09
+38,Illumina Inc,ILMN,0.598,310.1,-19.15
+39,Vertex Pharmaceuticals Inc,VRTX,0.57,173.05,-7.5
+40,Micron Technology Inc,MU,0.56,37.02,-2.09
+41,Activision Blizzard Inc,ATVI,0.518,53.98,-1.03
+42,Cognizant Technology Solutions Corp,CTSH,0.504,69.55,-0.79
+43,Marriott International Inc/MD,MAR,0.501,115.07,-1.97
+44,Ross Stores Inc,ROST,0.478,101.77,-0.99
+45,Twenty-First Century Fox Inc,FOX,0.47,47.59,-0.12
+46,Regeneron Pharmaceuticals Inc,REGN,0.467,346.59,-10.07
+47,Applied Materials Inc,AMAT,0.416,32.5,-1.78
+48,Analog Devices Inc,ADI,0.402,84.2,-3.39
+49,Fiserv Inc,FISV,0.401,78.49,-1.75
+50,Monster Beverage Corp,MNST,0.388,54.68,-2.16
+51,Autodesk Inc,ADSK,0.366,129.0,-6.55
+52,eBay Inc,EBAY,0.362,28.94,-0.69
+53,NXP Semiconductors NV,NXPI,0.356,79.15,-4.54
+54,O'Reilly Automotive Inc,ORLY,0.353,349.41,-5.33
+55,Sirius XM Holdings Inc,SIRI,0.344,6.14,-0.07
+56,Alexion Pharmaceuticals Inc,ALXN,0.34,118.6,-4.84
+57,Electronic Arts Inc,EA,0.335,86.71,-2.18
+58,Paychex Inc,PAYX,0.306,67.96,-1.06
+59,Lam Research Corp,LRCX,0.288,142.5,-5.35
+60,Xilinx Inc,XLNX,0.267,82.33,-3.31
+61,Dollar Tree Inc,DLTR,0.254,85.99,-0.39
+62,PACCAR Inc,PCAR,0.253,58.38,0.02
+63,Workday Inc,WDAY,0.252,132.1,-7.83
+64,Verisk Analytics Inc,VRSK,0.251,122.25,-1.13
+65,JD.com Inc ADR,JD,0.247,21.94,0.24
+66,Mylan NV,MYL,0.235,35.94,-1.01
+67,Cintas Corp,CTAS,0.235,176.83,-2.39
+68,Align Technology Inc,ALGN,0.234,217.3,-18.66
+69,Cerner Corp,CERN,0.234,56.76,-0.81
+70,Ulta Beauty Inc,ULTA,0.227,308.5,0.38
+71,IDEXX Laboratories Inc,IDXX,0.222,198.82,-8.35
+72,Check Point Software Technologies Ltd,CHKP,0.217,110.78,-1.86
+73,Microchip Technology Inc,MCHP,0.21,69.67,-2.46
+74,BioMarin Pharmaceutical Inc,BMRN,0.21,93.07,-2.6
+75,NetEase Inc ADR,NTES,0.209,212.52,-9.39
+76,Expedia Group Inc,EXPE,0.209,122.25,-1.79
+77,American Airlines Group Inc,AAL,0.206,36.75,0.53
+78,Fastenal Co,FAST,0.194,54.12,-0.64
+79,KLA-Tencor Corp,KLAC,0.184,92.29,-2.99
+80,Citrix Systems Inc,CTXS,0.179,105.6,-1.41
+81,Maxim Integrated Products Inc,MXIM,0.179,51.2,-0.89
+82,MercadoLibre Inc,MELI,0.178,321.7,-3.99
+83,Incyte Corp,INCY,0.173,62.86,-3.17
+84,Synopsys Inc,SNPS,0.171,89.74,-3.61
+85,Symantec Corp,SYMC,0.171,21.7,-0.55
+86,Skyworks Solutions Inc,SWKS,0.169,72.5,-4.16
+87,Liberty Global PLC,LBTYK,0.167,23.5,-1.01
+88,Western Digital Corp,WDC,0.165,43.41,-2.32
+89,Henry Schein Inc,HSIC,0.162,84.85,-0.58
+90,Cadence Design Systems Inc,CDNS,0.162,44.82,-1.44
+91,Take-Two Interactive Software Inc,TTWO,0.159,108.0,-5.05
+92,ASML Holding NV,ASML,0.157,169.0,-6.5
+93,Hasbro Inc,HAS,0.153,95.66,-1.66
+94,Seagate Technology PLC,STX,0.153,41.89,-1.14
+95,Shire PLC ADR,SHPG,0.151,181.95,1.64
+96,Ctrip.com International Ltd ADR,CTRP,0.15,25.55,-0.58
+97,JB Hunt Transport Services Inc,JBHT,0.144,106.2,-0.52
+98,Hologic Inc,HOLX,0.14,40.97,-0.81
+99,Wynn Resorts Ltd,WYNN,0.132,99.53,1.21
+100,Qurate Retail Inc,QRTEA,0.131,24.36,-0.16
+101,Vodafone Group PLC ADR,VOD,0.11,18.55,-0.24
+102,DENTSPLY SIRONA Inc,XRAY,0.099,36.54,0.48
+103,Liberty Global PLC,LBTYA,0.064,23.99,-1.13
