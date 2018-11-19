@@ -39,6 +39,7 @@ class BarSize(Enum):
         return self.value
 
 
+# noinspection PyUnresolvedReferences
 def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars: int, bar_size: BarSize,
                                inside_rth: bool) -> DataFrame:
     """
@@ -58,34 +59,50 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     url = "http://localhost:8080/stockData/reqHistoricalPrices"
 
     # defining a params dict for the parameters to be sent to the API
-    params = {
-        "symbol": symbol,
-        "endLocalDateStr": end_local_date_str,
-        "numOfBars": num_of_bars,
-        "barSize": bar_size.value,
-        "insideRTH": inside_rth
-    }
-
+    num_of_bars_left = num_of_bars
+    tbr_df = None
     # sending get request and saving the response as response object
-    r = requests.get(url=url, params=params, timeout=20)
-    r.raise_for_status()
+    while num_of_bars_left > 0:
+        params = {
+            "symbol": symbol,
+            "endLocalDateStr": end_local_date_str,
+            "numOfBars": num_of_bars_left if num_of_bars_left < 300 else 300,
+            "barSize": bar_size.value,
+            "insideRTH": inside_rth
+        }
+        print(str(params))
 
-    # extracting data in json format
-    # data = r.json()
-    df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
-    df["m_time_iso"] = pd.to_datetime(df["m_time_iso"], yearfirst=True)
-    df.set_index("m_time_iso", inplace=True)
-    df.drop("m_time", axis=1, inplace=True)
-    return df
+        r = requests.get(url=url, params=params, timeout=20)
+        r.raise_for_status()
+
+        # extracting data in json format
+        # data = r.json()
+        new_df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
+
+        new_df["m_time_iso"] = pd.to_datetime(new_df["m_time_iso"], yearfirst=True)
+        new_df.set_index("m_time_iso", inplace=True)
+        new_df.drop("m_time", axis=1, inplace=True)
+        if tbr_df is None:
+            tbr_df = new_df
+        else:
+            new_df = new_df.loc[new_df.index < tbr_df.index[0]]
+            tbr_df = new_df.append(tbr_df, verify_integrity=True)
+        num_of_bars_left = num_of_bars - len(tbr_df)
+        time_delta = pd.Timedelta("1 days") if BarSize.DAY_1 else pd.Timedelta("1 minutes")
+        end_local_date_str = (tbr_df.index[0] - time_delta).strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
+    return tbr_df
 
 
-def get_local_synced(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: str = None):
+# noinspection PyUnresolvedReferences
+def get_local_synced(symbol: str, num_of_days_needed: int = 272, bar_size: BarSize = BarSize.DAY_1,
+                     file_path: str = None):
     """
     fetch 272 trading-day-worth daily data using method get_historical_data_prices(...) and merge with local data of
     the same symbol. If there is no local symbol file, create it.
 
-    :param bar_size:
     :param symbol: stock symbol
+    :param num_of_days_needed number of days needed
+    :param bar_size: bar size
     :param file_path: target file path to hold data
     :return: the pandas.DateFrame updated.
     """
@@ -106,30 +123,34 @@ def get_local_synced(symbol: str, bar_size: BarSize = BarSize.DAY_1, file_path: 
     if file_path is None:
         file_path = RAW_DATA_PATH + "/" + symbol + "-TWS-DATA-{}.csv".format(
             "DAILY" if bar_size == BarSize.DAY_1 else "MINUTELY")
-    num_of_days_needed = 544
-    orignal_df = None
     try:
         orignal_df = pd.read_csv(file_path, parse_dates=True, index_col="m_time_iso", dtype=__dtype_dict)
         last_timestamp = orignal_df.index[-1]
-        last_day = pd.Timestamp(last_timestamp.year, last_timestamp.month, last_timestamp.day)
+        last_day = pd.Timestamp(last_timestamp.strftime('%Y-%m-%d'))
+        first_timestamp = orignal_df.index[0]
+        first_day_in_df = pd.Timestamp(first_timestamp.strftime('%Y-%m-%d'))
         time_delta = recent_bday - last_day
-        # print("time_delta.days: {}".format(time_delta.days))
-        num_of_days_needed = time_delta.days
-        if num_of_days_needed == 0:
-            return orignal_df
-        elif num_of_days_needed < 0:
+        num_of_days_needed_at_right = time_delta.days
+        if num_of_days_needed_at_right < 0:
             raise ValueError("num_of_days_needed: {} smaller than 0, this is illegal state.".format(num_of_days_needed))
+        end_local_date_str = current_timestamp.strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
+        right_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_right, bar_size, True)
+        right_df = right_df.loc[right_df.index > last_timestamp]
+        orignal_df = orignal_df.append(right_df, verify_integrity=True)
+        num_of_days_needed_at_left = num_of_days_needed - len(orignal_df)
+        if num_of_days_needed_at_left > 0:
+            end_local_date_str = (first_day_in_df - pd.Timedelta('1 minutes')).strftime(
+                time_utils.IB_LOCAL_DATETIME_FORMAT)
+            left_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_left, bar_size, True)
+            orignal_df = left_df.append(orignal_df, verify_integrity=True)
+        orignal_df.to_csv(file_path)
+        return orignal_df
     except FileNotFoundError:
         print("no filepath : {}".format(file_path))
     end_local_date_str = current_timestamp.strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
     df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed, bar_size, True)
-    if orignal_df is None:
-        df.to_csv(file_path)
-        return df
-    for ele in df.index:
-        orignal_df.loc[ele] = df.loc[ele]
-    orignal_df.to_csv(file_path)
-    return orignal_df
+    df.to_csv(file_path)
+    return df
 
 
 def query_symbol_list(index_name: str, query=None, queried_column: str = None, return_df: bool = False) -> List[str]:
@@ -151,7 +172,7 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
         raise TypeError("query can only be a str or a list of strings")
     index_symbols_dir = os.path.join(MAIN_RESOURCES_PATH, "index_symbols")
     target_file = os.path.join(index_symbols_dir, index_name + ".csv")
-    symbol_df = pd.read_csv(target_file, index_col="#", dtype= {
+    symbol_df = pd.read_csv(target_file, index_col="#", dtype={
         "#": np.int32,
         "Company": np.str,
         "Symbol": np.str,

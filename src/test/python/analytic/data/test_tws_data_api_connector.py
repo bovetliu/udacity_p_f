@@ -17,9 +17,10 @@ class TestTwsDataApiConnector(unittest.TestCase):
 
     def test_get_historical_data_prices(self):
         symbol = "NVDA"
-        end_local_date_str = "20180524 16:00:00"
-        res_data = \
-            tws_data_api_connector.get_historical_data_prices(symbol, end_local_date_str, 5, BarSize.DAY_1, True)
+        end_local_date_str = "20180524 16:01:00"
+        num_of_bars = 550
+        res_data = tws_data_api_connector.get_historical_data_prices(symbol, end_local_date_str, num_of_bars, BarSize.DAY_1, True)
+        self.assertEqual(num_of_bars, len(res_data))
         last_row = res_data.iloc[-1]
         # print(last_row)
         self.assertEqual(last_row["m_close"], 247.69)
@@ -28,6 +29,11 @@ class TestTwsDataApiConnector(unittest.TestCase):
         self.assertEqual(last_row["m_low"], 245.24)
         self.assertEqual(last_row["m_volume"], 77090)
         self.assertEqual(last_row["m_wap"], 247.63)
+
+        num_of_bars = 400
+        res_data = tws_data_api_connector.get_historical_data_prices(symbol, end_local_date_str, num_of_bars, BarSize.MIN_1, True)
+        self.assertEqual(23, res_data.index[0].day)
+        # print(res_data)
 
     def test_sync_sombol_to_local(self):
         symbol = "NVDA"
@@ -108,6 +114,7 @@ class TestTwsDataApiConnector(unittest.TestCase):
                 tws_data_api_connector.get_local_synced(symbol)
             except (HTTPError, requests.exceptions.Timeout) as err:
                 print("one error, symbol : {}".format(symbol))
+                print("error: {}".format(str(err)))
                 problematic_symbols.append(symbol)
         if len(problematic_symbols) > 0:
             print("problematic symbols: ")

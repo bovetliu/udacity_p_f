@@ -111,50 +111,48 @@ class TestTAIndicators(unittest.TestCase):
 
     def test_get_draw_down(self):
         symbol = "LMT"
-        tws_data_api_connector.get_local_synced(symbol)
-        nvda_df = tws_data_api_connector.get_local_data(symbol)
-        nvda_df_closes = nvda_df["m_close"]
-        nvda_df_closes = nvda_df_closes.iloc[-272:]
-        nvda_df_closes.name = "{}_close".format(symbol)
+        tws_data_api_connector.get_local_synced(symbol, num_of_days_needed=544)
+        stock_df = tws_data_api_connector.get_local_data(symbol)
+        closes = stock_df["m_close"]
+        closes.name = "{}_close".format(symbol)
 
         plt.figure(1, figsize=(8, 16))
         plt.subplot(4, 1, 1)
-        plt.plot(nvda_df_closes.index, nvda_df_closes.values, 'g-')
+        plt.plot(closes.index, closes.values, 'g-')
         plt.xlabel('date')
         plt.ylabel('price')
 
         plt.subplot(4, 1, 2)
         window = None
-        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
-        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
-
+        drawdown = ta_indicators.get_draw_down(closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(closes, window=window)
         line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
-        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
-        plt.setp(line_reversed_drawdown, alpha=.5)
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-', alpha=.5)
         plt.xlabel('date')
         plt.ylabel('ratio')
+        plt.ylim(top=1.1)
         plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
 
         plt.subplot(4, 1, 3)
         window = 100
-        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
-        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
+        drawdown = ta_indicators.get_draw_down(closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(closes, window=window)
         line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
-        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
-        plt.setp(line_reversed_drawdown, alpha=.5)
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-', alpha=.5)
         plt.xlabel('date')
         plt.ylabel('ratio')
+        plt.ylim(top=1.1)
         plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
 
         plt.subplot(4, 1, 4)
         window = 50
-        drawdown = ta_indicators.get_draw_down(nvda_df_closes, window=window)
-        reversed_drawdown = ta_indicators.get_reversed_draw_down(nvda_df_closes, window=window)
+        drawdown = ta_indicators.get_draw_down(closes, window=window)
+        reversed_drawdown = ta_indicators.get_reversed_draw_down(closes, window=window)
         line_drawdown = plt.plot(drawdown.index, drawdown.values, 'g-')
-        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-')
-        plt.setp(line_reversed_drawdown, alpha=.5)
+        line_reversed_drawdown = plt.plot(reversed_drawdown.index, reversed_drawdown.values, 'r-', alpha=.5)
         plt.xlabel('date')
         plt.ylabel('ratio')
+        plt.ylim(top=1.1)
         plt.legend((drawdown.name, reversed_drawdown.name), loc='lower left')
         plt.savefig("/home/boweiliu/workrepo/udacity_p_f_pics/drawdown/drawdown_{}_{}.png".format
                     (symbol, datetime.datetime.now().date().isoformat()),
