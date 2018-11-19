@@ -104,14 +104,16 @@ class TestTwsDataApiConnector(unittest.TestCase):
     # @unittest.skip  # no reason needed
     def test_syn_sp500(self):
         print("going to sync 500 stocks to local")
-        symbols = tws_data_api_connector.query_symbol_list("sp500", return_df=False)
-        # symbols = ['AAPL']
+        # symbols = tws_data_api_connector.query_symbol_list("sp500", return_df=False)
+        symbols = ['AVGO', 'BKNG',  'JCI', 'WELL', 'HLT', 'APTV', 'SBAC', 'INFO', 'EVRG', 'LLL', 'CBRE', 'CBOE',
+                   'TPR', 'FTI', 'NCLH', 'ARNC', 'JEF', 'XRX', 'UAA']
+        symbols = ['AVGO', 'BKNG', 'JCI', 'WELL', 'HLT', 'APTV', 'SBAC']
         problematic_symbols = []
         for symbol in symbols:
             time.sleep(0.5)
-            print("going to sync {}...".format(symbol))
+            print("going to sync {};".format(symbol))
             try:
-                tws_data_api_connector.get_local_synced(symbol)
+                tws_data_api_connector.get_local_synced(symbol, num_of_days_needed=600)
             except (HTTPError, requests.exceptions.Timeout) as err:
                 print("one error, symbol : {}".format(symbol))
                 print("error: {}".format(str(err)))

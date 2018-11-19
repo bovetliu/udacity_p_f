@@ -62,7 +62,8 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     num_of_bars_left = num_of_bars
     tbr_df = None
     # sending get request and saving the response as response object
-    while num_of_bars_left > 0:
+    exhausted = False
+    while num_of_bars_left > 0 and (not exhausted):
         params = {
             "symbol": symbol,
             "endLocalDateStr": end_local_date_str,
@@ -72,13 +73,26 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
         }
         print(str(params))
 
-        r = requests.get(url=url, params=params, timeout=20)
-        r.raise_for_status()
-
-        # extracting data in json format
-        # data = r.json()
-        new_df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
-
+        new_df = None
+        cnt = 0
+        len_of_df_list = []
+        while cnt < 3:
+            r = requests.get(url=url, params=params, timeout=20)
+            r.raise_for_status()
+            new_df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
+            len_of_df_list.append(len(new_df))
+            if len(new_df) == params["numOfBars"]:
+                break
+            else:
+                print("requested {} but got {} records, going to retry".format(params["numOfBars"], len(new_df)))
+                cnt += 1
+        if new_df is None:
+            raise Exception("could not fetch required DataFrame")
+        if len(new_df) != params["numOfBars"]:
+            if (len_of_df_list[0] != len_of_df_list[1]) or (len_of_df_list[1] != len_of_df_list[2]):
+                raise Exception("have retried three times, but could not make len(new_df) == params[\"numOfBars\"]")
+            else:
+                exhausted = True
         new_df["m_time_iso"] = pd.to_datetime(new_df["m_time_iso"], yearfirst=True)
         new_df.set_index("m_time_iso", inplace=True)
         new_df.drop("m_time", axis=1, inplace=True)
@@ -192,6 +206,7 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
                 return any(q.lower() in name for q in query)
         symbol_df = symbol_df.loc[symbol_df["Company"].apply(filter_func)]
 
+    symbol_df["Symbol"] = symbol_df["Symbol"].apply(lambda val_in_ser: val_in_ser.replace(".", " "))
     return symbol_df if return_df else symbol_df["Symbol"].tolist()
 
 
