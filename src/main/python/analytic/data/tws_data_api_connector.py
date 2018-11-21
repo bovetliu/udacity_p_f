@@ -6,6 +6,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import requests
+from requests.exceptions import HTTPError
 from pandas import DataFrame
 from pandas.tseries.offsets import BDay
 
@@ -51,6 +52,8 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     :param inside_rth: inside Regular Trading Hours ?
     :return: a pandas.DataFrame indexed by m_time_iso
     """
+    if not isinstance(num_of_bars, int) or num_of_bars < 0:
+        raise ValueError("num_of_bars must be an integer larger or equal to 0")
     if not symbol:
         raise ValueError("symbol cannot be None or empty")
     if not end_local_date_str:
@@ -59,7 +62,7 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
     url = "http://localhost:8080/stockData/reqHistoricalPrices"
 
     # defining a params dict for the parameters to be sent to the API
-    num_of_bars_left = num_of_bars
+    num_of_bars_left = num_of_bars if num_of_bars > 0 else 1
     tbr_df = None
     # sending get request and saving the response as response object
     exhausted = False
@@ -71,15 +74,16 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
             "barSize": bar_size.value,
             "insideRTH": inside_rth
         }
+        headers = {'Accept': 'application/json'}
         print(str(params))
 
         new_df = None
         cnt = 0
         len_of_df_list = []
         while cnt < 3:
-            r = requests.get(url=url, params=params, timeout=20)
-            r.raise_for_status()
-            new_df = pd.read_json(r.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
+            res = requests.get(url=url, params=params, headers=headers, timeout=20)
+            res.raise_for_status()
+            new_df = pd.read_json(res.content, orient="records", typ="frame", dtype=__dtype_dict, date_unit="s")
             len_of_df_list.append(len(new_df))
             if len(new_df) == params["numOfBars"]:
                 break
@@ -90,7 +94,7 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
             raise Exception("could not fetch required DataFrame")
         if len(new_df) != params["numOfBars"]:
             if (len_of_df_list[0] != len_of_df_list[1]) or (len_of_df_list[1] != len_of_df_list[2]):
-                raise Exception("have retried three times, but could not make len(new_df) == params[\"numOfBars\"]")
+                raise Exception("have tried three times, but could not make len(new_df) == params[\"numOfBars\"]")
             else:
                 exhausted = True
         new_df["m_time_iso"] = pd.to_datetime(new_df["m_time_iso"], yearfirst=True)
@@ -104,6 +108,8 @@ def get_historical_data_prices(symbol: str, end_local_date_str: str, num_of_bars
         num_of_bars_left = num_of_bars - len(tbr_df)
         time_delta = pd.Timedelta("1 days") if BarSize.DAY_1 else pd.Timedelta("1 minutes")
         end_local_date_str = (tbr_df.index[0] - time_delta).strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
+    if num_of_bars == 0:
+        tbr_df = tbr_df[0:0]
     return tbr_df
 
 
@@ -148,15 +154,22 @@ def get_local_synced(symbol: str, num_of_days_needed: int = 272, bar_size: BarSi
         if num_of_days_needed_at_right < 0:
             raise ValueError("num_of_days_needed: {} smaller than 0, this is illegal state.".format(num_of_days_needed))
         end_local_date_str = current_timestamp.strftime(time_utils.IB_LOCAL_DATETIME_FORMAT)
-        right_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_right, bar_size, True)
-        right_df = right_df.loc[right_df.index > last_timestamp]
-        orignal_df = orignal_df.append(right_df, verify_integrity=True)
+        if num_of_days_needed_at_right > 0:
+            right_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_right, bar_size, True)
+            right_df = right_df.loc[right_df.index > last_timestamp]
+            orignal_df = orignal_df.append(right_df, verify_integrity=True)
         num_of_days_needed_at_left = num_of_days_needed - len(orignal_df)
         if num_of_days_needed_at_left > 0:
             end_local_date_str = (first_day_in_df - pd.Timedelta('1 minutes')).strftime(
                 time_utils.IB_LOCAL_DATETIME_FORMAT)
-            left_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_left, bar_size, True)
-            orignal_df = left_df.append(orignal_df, verify_integrity=True)
+            try:
+                left_df = get_historical_data_prices(symbol, end_local_date_str, num_of_days_needed_at_left, bar_size, True)
+                orignal_df = left_df.append(orignal_df, verify_integrity=True)
+            except HTTPError as httpError:
+                if httpError.response.status_code == 404:
+                    pass
+                else:
+                    raise httpError
         orignal_df.to_csv(file_path)
         return orignal_df
     except FileNotFoundError:
@@ -171,19 +184,19 @@ def query_symbol_list(index_name: str, query=None, queried_column: str = None, r
     """
     find symbols matching query
 
-    :param index_name: index name like "sp500"
+    :param index_name: index name like "sp500", "nasdaq100", "dowjones", "spdr_sectors"
     :param query: the query, can be one single str or a list of strings, such as "lmt" or ["Advanced", "apple"]
     :param queried_column: specify which column should be used to match
     :param return_df: indicate whether to return DataFrame or a list of symbols
     :return: list of symbols matching query.
     """
-    if index_name != "sp500":
-        raise ValueError("For now only sp500 is supported.")
     if isinstance(queried_column, str) and queried_column.lower() == "symbol":
         if isinstance(query, str):
             query = query.upper()
     if query is not None and (not isinstance(query, str) and not isinstance(query, list)):
         raise TypeError("query can only be a str or a list of strings")
+    if index_name == "spdr_sectors":
+        return ["XLU", "XLC", "XLI", "XLV", "XLY", "XLRE", "XLK", "XLF", "XLE", "XLP", "XLB"]
     index_symbols_dir = os.path.join(MAIN_RESOURCES_PATH, "index_symbols")
     target_file = os.path.join(index_symbols_dir, index_name + ".csv")
     symbol_df = pd.read_csv(target_file, index_col="#", dtype={
